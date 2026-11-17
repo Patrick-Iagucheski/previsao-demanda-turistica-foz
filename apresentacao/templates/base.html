@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Previsão de Demanda Turística{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+  {% block cabecalho %}{% endblock %}
+</head>
+<body>
+<header>
+  <form method="post" action="{{ url_for('trocar_base') }}" class="seletor-base">
+    <label for="base">Base</label>
+    <select id="base" name="base" onchange="this.form.submit()">
+      {% for b in bases %}<option value="{{ b.id }}" {{ 'selected' if b.id == base_ativa.id }}>{{ b.nome }}</option>{% endfor %}
+    </select>
+  </form>
+  <div class="marca">Sistema de Previsão de Demanda Turística</div>
+  <div class="sub">Aeroporto Internacional de Foz do Iguaçu (IGU / SBFI) &middot; Random Forest &times; LSTM</div>
+  <nav>
+    <a href="{{ url_for('importacao') }}"  class="{{ 'ativo' if aba == 'importacao'  }}">Importar</a>
+    <a href="{{ url_for('treinamento') }}" class="{{ 'ativo' if aba == 'treinamento' }}">Treinar</a>
+    <a href="{{ url_for('comparar') }}"  class="{{ 'ativo' if aba == 'comparacao'  }}">Comparar</a>
+    <a href="{{ url_for('historico') }}"   class="{{ 'ativo' if aba == 'historico'   }}">Histórico</a>
+  </nav>
+</header>
+
+<main>
+{% with avisos = get_flashed_messages(with_categories=true) %}{% for cat, msg in avisos %}
+<div class="aviso {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}
+{% block conteudo %}{% endblock %}
+</main>
+
+<footer>
+  Patrick Iagucheski de Oliveira &middot; Trabalho de Conclusão de Curso &middot; Sistemas de Informação &middot; UDC 2026
+</footer>
+</body>
+</html>

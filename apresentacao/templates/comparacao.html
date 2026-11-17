@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block titulo %}Comparar modelos{% endblock %}
+{% block conteudo %}
+
+<h1>Comparação previsto &times; real <span class="selo ok">funcional</span></h1>
+<p class="intro">Confronta as execuções selecionadas sobre o conjunto de teste, com destaque para os meses de alta temporada.</p>
+
+<div class="painel">
+  <h2>Execuções a comparar</h2>
+  {% if opcoes %}
+  <form method="get" action="{{ url_for('comparar') }}">
+    <div class="campo">
+      {% for sel in selecionados %}
+      <select name="ids" style="min-width:250px" aria-label="Execução {{ loop.index }}">
+        <option value="">(nenhuma)</option>
+        {% for o in opcoes %}
+        <option value="{{ o.id }}" {% if o.id == sel %}selected{% endif %}>{{ o.rotulo }}</option>
+        {% endfor %}
+      </select>
+      {% endfor %}
+      <button class="btn" type="submit">Comparar</button>
+      <button class="btn sec" type="submit" formmethod="post" formaction="{{ url_for('exportar') }}">Exportar CSV</button>
+    </div>
+  </form>
+  <p class="nota">Sem seleção, a tela compara a execução mais recente de cada modelo com a semente padrão do projeto ({{ semente_padrao }}) &mdash; o resultado principal do Capítulo 5 do TCC.</p>
+  {% else %}
+  <p style="color:var(--cinza);margin:0">Nenhuma execução registrada. Treine ao menos um modelo na tela <a href="{{ url_for('treinamento') }}">Treinar</a>.</p>
+  {% endif %}
+</div>
+
+<div class="painel">
+  <h2>Previsto &times; real {% if figura and figura.apenas_observada %}<span class="selo ok">série observada real</span>{% endif %}</h2>
+  {% if figura %}
+  {% set f = figura %}
+  <div class="grafico">
+    <svg viewBox="0 0 {{ f.largura }} {{ f.altura }}" role="img" aria-label="Desembarques previstos e reais por mês">
+      {% for b in f.faixas_alta %}<rect x="{{ b.x }}" y="{{ f.y0 }}" width="{{ b.largura }}" height="{{ f.y1 - f.y0 }}" fill="#fbeedc"/>{% endfor %}
+      {% for t in f.ticks_y %}
+      <line x1="{{ f.x0 }}" y1="{{ t.y }}" x2="{{ f.x1 }}" y2="{{ t.y }}" stroke="#e8eeef" stroke-width="1"/>
+      <text x="{{ f.x0 - 8 }}" y="{{ t.y + 3.5 }}" font-size="10" fill="#5e7075" text-anchor="end" font-family="Consolas,monospace">{{ t.texto }}</text>
+      {% endfor %}
+      {% for s in f.series %}
+      <polyline fill="none" stroke="{{ s.cor }}" stroke-width="{{ s.largura }}" stroke-dasharray="{{ s.tracejado }}" stroke-linejoin="round"
+        points="{% for p in s.pontos %}{{ p.x }},{{ p.y }} {% endfor %}"/>
+      {% for p in s.pontos %}
+        {% if s.marcador == 'quadrado' %}
+      <rect x="{{ p.x - 3.4 }}" y="{{ p.y - 3.4 }}" width="6.8" height="6.8" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></rect>
+        {% elif s.marcador == 'triangulo' %}
+      <polygon points="{{ p.x }},{{ p.y - 4.4 }} {{ p.x - 4.2 }},{{ p.y + 3.2 }} {{ p.x + 4.2 }},{{ p.y + 3.2 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></polygon>
+        {% else %}
+      <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 4 if s.nome == 'Valor real' else 3.6 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></circle>
+        {% endif %}
+      {% endfor %}
+      {% endfor %}
+      {% for r in f.rotulos_x %}
+      <text x="{{ r.x }}" y="{{ f.y1 + 18 }}" font-size="10" fill="#5e7075" text-anchor="middle" font-family="Consolas,monospace">{{ r.texto }}</text>
+      {% endfor %}
+    </svg>
+    <div class="legenda">
+      {% for s in f.series %}
+      <span><i class="chave" style="border-top:{{ s.largura }}px {{ 'dashed' if s.tracejado else 'solid' }} {{ s.cor }}"></i> {{ s.nome }}</span>
+      {% endfor %}
+      <span><i class="chave" style="border-top:9px solid #fbeedc"></i> Alta temporada</span>
+    </div>
+  </div>
+  <p class="nota">{% if f.apenas_observada %}Sem execução selecionada: o gráfico mostra os últimos doze meses da série observada.{% else %}Desembarques mensais no período de teste. Passe o cursor sobre um ponto para ver o valor.{% endif %}</p>
+  {% else %}
+  <p style="color:var(--cinza);margin:0">Nenhuma série carregada. Importe os dados para visualizar a série observada.</p>
+  {% endif %}
+</div>
+
+<div class="painel">
+  <h2>Métricas por execução e escopo</h2>
+  <div class="rolagem">
+    <table>
+      <thead><tr><th>Execução</th><th>Modelo</th><th>Semente</th><th>MAE global</th><th>RMSE global</th><th>MAPE global</th><th>MAPE alta temporada</th></tr></thead>
+      <tbody>
+      {% for l in linhas %}
+        <tr><td class="num"><a href="{{ url_for('execucao', id_execucao=l.id) }}">{{ l.id }}</a></td><td>{{ l.modelo }}</td><td class="num">{{ l.semente }}</td>
+          <td class="num">{{ l.mae_g|milhar }}</td><td class="num">{{ l.rmse_g|milhar }}</td><td class="num">{{ l.mape_g|pct }}</td><td class="num">{{ l.mape_a|pct }}</td></tr>
+      {% else %}
+        <tr><td colspan="7" class="vazio" style="text-align:center;padding:20px">Nenhuma execução selecionada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">MAE e RMSE em número de desembarques.</p>
+</div>
+
+<div class="painel">
+  <h2>Teste de significância</h2>
+  <dl class="numeros">
+    <div><dt>Teste</dt><dd style="font-size:14px">Diebold-Mariano<small>com correção de Harvey, Leybourne e Newbold</small></dd></div>
+    <div><dt>Escopo global</dt><dd style="font-size:18px">n = {{ n_global }}<small>{{ 'aplicável' if n_global >= n_minimo else 'insuficiente para inferência' }}</small></dd></div>
+    <div><dt>Alta temporada</dt><dd style="font-size:18px;color:var(--ambar)">n = {{ n_alta }}<small>{{ 'aplicável' if n_alta >= n_minimo else 'insuficiente para inferência' }}</small></dd></div>
+  </dl>
+  {% if testes %}
+  <div class="rolagem" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Par comparado (escopo global, perda quadrática)</th><th>DM</th><th>Valor-p</th><th>Conclusão</th></tr></thead>
+      <tbody>
+      {% for t in testes %}
+        <tr><td>nº {{ t.a.id }} {{ t.a.modelo }} &times; nº {{ t.b.id }} {{ t.b.modelo }}</td>
+          <td class="num">{{ t.estatistica|dec }}</td><td class="num">{{ t.valor_p|dec }}</td>
+          <td>{% if t.significativo %}<span class="selo ok">{{ t.veredito }}</span>{% else %}{{ t.veredito }}{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">Estatística negativa indica que a primeira execução do par errou menos. Um modelo só é declarado superior se a diferença for significativa (Seção 3.7 do TCC); o teste complementa as métricas quando a amostra permite (RN08). Com n = {{ n_alta }}, o escopo de alta temporada é interpretado apenas de forma descritiva.</p>
+  {% else %}
+  <p class="nota">Selecione ao menos duas execuções para aplicar o teste.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

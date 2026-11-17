@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% block titulo %}Importar dados da ANAC{% endblock %}
+{% block cabecalho %}{% if em_andamento %}<noscript><meta http-equiv="refresh" content="2"></noscript>{% endif %}{% endblock %}
+{% block conteudo %}
+
+<h1>Importação dos dados da ANAC <span class="selo ok">funcional</span></h1>
+<p class="intro">Lê os arquivos CSV de movimentação aeroportuária, filtra os registros de Foz do Iguaçu e consolida a série mensal de desembarques.</p>
+
+<div class="painel">
+  <h2>Origem dos arquivos</h2>
+  <form method="post" action="{{ url_for('importar') }}">
+    <div class="campo">
+      <label for="pasta">Pasta dos CSV</label>
+      <input class="largo" type="text" id="pasta" name="pasta" value="{{ origem }}">
+      <button class="btn" type="submit" {% if em_andamento %}disabled{% endif %}>Importar dados</button>
+    </div>
+  </form>
+</div>
+
+{% if tarefa %}
+<div class="painel">
+  <h2>Importação {% if em_andamento %}em andamento{% elif tarefa.estado == 'concluida' %}concluída{% else %}não realizada{% endif %}</h2>
+  {% if em_andamento %}
+    <div class="andamento">
+      <span class="giro" aria-hidden="true"></span>
+      <span id="andamento-texto">{% if not tarefa.total or tarefa.lidos < tarefa.total %}Lendo arquivo <b>{{ tarefa.lidos }} de {{ tarefa.total or '…' }}</b>{% if tarefa.arquivo %} ({{ tarefa.arquivo }}){% endif %} &mdash; {{ decorrido }} s decorridos.{% else %}Arquivos lidos. Consolidando a série e gravando no banco&hellip; ({{ decorrido }} s){% endif %}</span>
+    </div>
+    <progress class="barra" id="andamento-barra" value="{{ tarefa.lidos }}" max="{{ tarefa.total or 1 }}">{{ percentual }}%</progress>
+    <p class="nota"><span id="andamento-pct">{{ percentual }}</span>% · o gráfico abaixo se monta a cada arquivo lido.</p>
+    <div class="grafico" id="grafico-parcial" style="margin-top:12px">{% if figura_parcial %}{% with g = figura_parcial %}{% include "_grafico_serie.html" %}{% endwith %}{% else %}<p class="nota" style="margin:0">Aguardando o primeiro arquivo&hellip;</p>{% endif %}</div>
+  {% elif tarefa.estado == 'concluida' %}
+    <p style="margin:0;font-size:13px">Importação concluída: {{ tarefa.resumo }} gravados no banco, em {{ decorrido }} s.</p>
+  {% else %}
+    <div class="aviso erro" style="margin:0">
+      <b>Não foi possível importar.</b>
+      {% for linha in tarefa.erro.split('\n') %}<p style="margin:6px 0 0">{{ linha }}</p>{% endfor %}
+    </div>
+    <p class="nota">Nenhum dado foi alterado: a série gravada no banco continua a mesma.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if resumo %}
+<div class="painel">
+  <h2>Resultado da importação {% if base_ativa.tipo == 'simulada' %}<span class="selo alta">dados simulados até {{ base_ativa.simulado_ate|mes_ano }}</span>{% else %}<span class="selo ok">dados reais</span>{% endif %}</h2>
+  <dl class="numeros">
+    <div><dt>Aeroporto</dt><dd style="font-size:17px">{{ resumo.iata }} / {{ resumo.icao }}<small>{{ resumo.aeroporto }}</small></dd></div>
+    <div><dt>Período</dt><dd style="font-size:15px">{{ resumo.periodo }}<small>cobertura da série</small></dd></div>
+    <div><dt>Meses com registro</dt><dd>{{ resumo.meses_registro }}<small>série consolidada</small></dd></div>
+    <div><dt>Fora da pandemia</dt><dd>{{ resumo.utilizaveis }}<small>utilizáveis na modelagem</small></dd></div>
+    <div><dt>Alta temporada</dt><dd>{{ resumo.alta_temporada }}<small>meses jan/jul/dez</small></dd></div>
+    {% set i = integridade %}
+    <div><dt>Integridade (RF04)</dt><dd style="color:{{ 'var(--ok)' if i.integra else 'var(--ambar)' }};font-size:17px">{{ 'OK' if i.integra else 'ATENÇÃO' }}<small>{{ i.duplicidades|length }} duplicidade(s) · {{ i.valores_invalidos|length }} valor(es) inválido(s) · {% if i.lacunas %}{{ i.lacunas|length }} mês(es) ausente(s): {% for l in i.lacunas %}{{ l.mes|mes_ano }}{{ ' (na pandemia)' if l.na_pandemia else ' (FORA da pandemia)' }}{{ ', ' if not loop.last }}{% endfor %}{% else %}sem lacunas{% endif %}</small></dd></div>
+  </dl>
+
+  <h2 style="margin-top:20px">Blocos temporais</h2>
+  <div class="rolagem">
+    <table>
+      <thead><tr><th>Bloco</th><th>Início</th><th>Fim</th><th>Meses</th><th>Descrição</th></tr></thead>
+      <tbody>
+      {% for f in resumo.faixas %}
+        <tr>
+          <td class="num">{{ f.bloco }}</td>
+          <td>{{ f.inicio|mes_ano }}</td>
+          <td>{{ f.fim|mes_ano }}</td>
+          <td class="num">{{ f.meses }}</td>
+          <td>{{ 'Pré-pandemia' if f.bloco == 1 else 'Pós-pandemia' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="painel">
+  <h2>Série consolidada &mdash; {{ registros|length }} registros
+    <details class="ajuda">
+      <summary title="Como cada mês é calculado" aria-label="Como cada mês é calculado">?</summary>
+      <div class="ajuda-caixa">
+        <div class="ajuda-topo">Como cada mês é calculado <button type="button" class="ajuda-fechar" aria-label="Fechar">&times;</button></div>
+        <p><b>Desembarques do mês</b> = soma de <code>QT_PAX_LOCAL</code> + <code>QT_PAX_CONEXAO_DOMESTICO</code> + <code>QT_PAX_CONEXAO_INTERNACIONAL</code>,
+          considerando <b>somente</b> as linhas do CSV em que:</p>
+        <ul>
+          <li><code>NR_VOO_OUTRO_AEROPORTO</code> = <b>SBFI</b> (o voo tem Foz como destino) <b>e</b></li>
+          <li><code>NR_MOVIMENTO_TIPO</code> = <b>D</b> (o registro é a decolagem no aeroporto de origem).</li>
+        </ul>
+        <p>Cada voo que decola de outro aeroporto rumo a Foz leva os passageiros que vão desembarcar lá (regra RN01). Por isso somar uma
+          coluna inteira do arquivo dá o total de todos os aeroportos, não o de Foz.</p>
+        <p><i>Exemplo, abr/2020:</i> 10 voos &rarr; 341 + 178 + 71 = <b>590</b>.</p>
+        {% if base_ativa.tipo == 'simulada' %}
+        <p><b>Base simulada:</b> os meses marcados como &ldquo;simulado&rdquo; ({{ registros[0].rotulo|mes_ano }} a {{ base_ativa.simulado_ate|mes_ano }})
+          não vêm de CSV. São gerados pelo sistema a partir do padrão da série real.</p>
+        {% endif %}
+      </div>
+    </details>
+  </h2>
+  <div class="abas" role="tablist">
+    <input type="radio" name="aba-serie" id="aba-grafico" value="grafico" checked>
+    <label for="aba-grafico" role="tab">Gráfico</label>
+    <input type="radio" name="aba-serie" id="aba-tabela" value="tabela">
+    <label for="aba-tabela" role="tab">Tabela</label>
+
+    <div class="aba-conteudo" id="conteudo-grafico" role="tabpanel">
+      <div class="grafico">
+        <div class="seletor-ano">
+          <b id="titulo-grafico">{{ figura_serie.titulo }}</b>
+          <div class="controles-ano">
+            <button type="button" class="btn mini ativo" id="ano-todos">Todos</button>
+            <label for="campo-ano">Ano</label>
+            <div class="combo-ano">
+              <input type="text" id="campo-ano" role="combobox" aria-expanded="false" aria-controls="lista-anos"
+                     aria-autocomplete="list" inputmode="numeric" maxlength="4" placeholder="Selecione o ano"
+                     data-min="{{ figura_serie.anos[0] }}" data-max="{{ figura_serie.anos[-1] }}" autocomplete="off">
+              <span class="combo-seta" aria-hidden="true">&#9662;</span>
+              <div class="lista-anos" id="lista-anos" role="listbox" aria-label="Anos da série">
+                {% for a in figura_serie.lista_anos %}
+                <div class="item-ano" role="option" id="opcao-ano-{{ a.ano }}" data-ano="{{ a.ano }}" aria-selected="false">
+                  <b>{{ a.ano }}</b><small>{{ a.texto }}</small>
+                </div>
+                {% endfor %}
+                <div class="lista-vazia" hidden></div>
+              </div>
+            </div>
+            <div class="passo-ano">
+              <button type="button" id="ano-proximo" aria-label="Próximo ano" title="Próximo ano">&#9650;</button>
+              <button type="button" id="ano-anterior" aria-label="Ano anterior" title="Ano anterior">&#9660;</button>
+            </div>
+          </div>
+        </div>
+        <p class="erro-ano" id="erro-ano" role="alert"></p>
+        <div id="grafico-serie">{% with g = figura_serie %}{% include "_grafico_serie.html" %}{% endwith %}</div>
+      </div>
+      <p class="nota">{% if base_ativa.tipo == 'simulada' %}Até {{ base_ativa.simulado_ate|mes_ano }} os meses são simulados; a partir daí, dados reais da ANAC. {% endif %}Passe o cursor sobre um mês para ver os passageiros e as variações; escolha ou digite um ano (ou clique num ponto) para ampliar.</p>
+    </div>
+
+    <div class="aba-conteudo" id="conteudo-tabela" role="tabpanel">
+      <div class="rolagem" style="max-height:330px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Competência</th><th>Desembarques</th><th>Alta temporada</th><th>Pandemia</th><th>Bloco</th></tr></thead>
+          <tbody>
+          {% set ns = namespace(anterior='') %}
+          {% for r in registros %}
+            {# mês sem registro (lacuna da verificação de integridade): só exibido, não entra na série #}
+            {% for l in integridade.lacunas if ns.anterior < l.mes and l.mes < r.rotulo %}
+            <tr class="{{ 'linha-pandemia' if l.na_pandemia }} linha-lacuna">
+              <td>{{ l.mes }}</td>
+              <td colspan="2">sem dados &mdash; arquivo da ANAC ausente ou incompleto</td>
+              <td>{{ 'sim' if l.na_pandemia else '—' }}</td>
+              <td class="num">&mdash;</td>
+            </tr>
+            {% endfor %}
+            {% set ns.anterior = r.rotulo %}
+            <tr{% if r.pandemia %} class="linha-pandemia"{% elif r.alta_temporada %} class="linha-alta"{% endif %}>
+              <td>{{ r.ano }}-{{ '%02d' % r.mes }}{% if base_ativa.tipo == 'simulada' and r.rotulo <= base_ativa.simulado_ate %} <span class="selo alta">simulado</span>{% endif %}</td>
+              <td class="num">{{ '{:,}'.format(r.desembarques|int).replace(',', '.') }}</td>
+              <td>{{ 'sim' if r.alta_temporada else '—' }}</td>
+              <td>{{ 'sim' if r.pandemia else '—' }}</td>
+              <td class="num">{{ '—' if r.pandemia else r.bloco_temporal }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="legenda">
+        <span><i class="chave" style="border-top:9px solid #d9f2e3"></i> Alta temporada</span>
+        <span><i class="chave" style="border-top:9px solid #6a7c82"></i> Pandemia (fora da análise)</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="painel">
+  <h2>Resultado da importação</h2>
+  <p style="color:var(--cinza);margin:0">Nenhuma série carregada. Clique em <b>Importar dados</b> para executar a rotina de ingestão sobre os arquivos da ANAC.</p>
+</div>
+{% endif %}
+
+<div class="painel">
+  <h2>Como funciona
+    <details class="ajuda">
+      <summary title="Detalhes técnicos" aria-label="Detalhes técnicos">?</summary>
+      <div class="ajuda-caixa">
+        <div class="ajuda-topo">Detalhes técnicos <button type="button" class="ajuda-fechar" aria-label="Fechar">&times;</button></div>
+        <p>O botão aciona <code>IngestaoService.importar(pasta)</code>, que usa o carregador da ANAC para ler os CSV e consolidar a série mensal.</p>
+        <p>A série é gravada na tabela <code>tb_ser_registros_mensais</code> e relida dela pelas demais telas.</p>
+        <p>A integridade é verificada por <code>IngestaoService.validar</code> (RF04).</p>
+      </div>
+    </details>
+  </h2>
+  <p style="margin:0;font-size:13px;color:var(--cinza)">
+    Os dados usados pelo sistema são coletados dos arquivos CSV de movimentações aeroportuárias publicados pela ANAC. De cada arquivo
+    são extraídos os desembarques nos voos com destino ao Aeroporto Internacional de Foz do Iguaçu (SBFI), somados mês a mês, formando a
+    série histórica usada no treinamento e na avaliação do Random Forest e da LSTM, além do modelo de referência (naïve). Cada mês recebe
+    as marcações de alta temporada, pandemia e bloco temporal antes de ser gravado no banco de dados. A integridade da série gravada
+    (continuidade, valores inválidos e duplicidades) é verificada e exibida acima. Atende aos requisitos RF01 a RF06.
+  </p>
+</div>
+
+<script>
+  // Lembra a aba escolhida da série (Gráfico ou Tabela) entre as visitas.
+  (function () {
+    var salva = null;
+    try { salva = localStorage.getItem("aba-serie"); } catch (e) {}
+    var aba = salva && document.getElementById("aba-" + salva);
+    if (aba) aba.checked = true;
+    document.querySelectorAll('input[name="aba-serie"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        try { localStorage.setItem("aba-serie", r.value); } catch (e) {}
+      });
+    });
+  })();
+{% if em_andamento %}
+
+  // Durante a importação, consulta o andamento a cada meio segundo e redesenha
+  // o gráfico parcial; ao terminar, recarrega a página com a série gravada.
+  (function consultar() {
+    fetch("{{ url_for('andamento_importacao') }}", {cache: "no-store"})
+      .then(function (r) { return r.json(); })
+      .then(function (a) {
+        if (a.estado !== "executando") { location.reload(); return; }
+        document.getElementById("andamento-texto").innerHTML = !a.total || a.lidos < a.total
+          ? "Lendo arquivo <b>" + a.lidos + " de " + (a.total || "…") + "</b>" + (a.arquivo ? " (" + a.arquivo + ")" : "") + " &mdash; " + a.decorrido + " s decorridos."
+          : "Arquivos lidos. Consolidando a série e gravando no banco&hellip; (" + a.decorrido + " s)";
+        var barra = document.getElementById("andamento-barra");
+        barra.max = a.total || 1;
+        barra.value = a.lidos;
+        document.getElementById("andamento-pct").textContent = a.percentual;
+        if (a.grafico) document.getElementById("grafico-parcial").innerHTML = a.grafico;
+        setTimeout(consultar, 500);
+      })
+      .catch(function () { setTimeout(consultar, 2000); });
+  })();
+{% endif %}
+
+  // Caixa de detalhes do gráfico da série: ao passar o cursor num mês, mostra
+  // os passageiros, as variações e as marcações do ponto (dados em data-*).
+  // Delegada no documento, vale também para o gráfico que se monta na leitura.
+  (function () {
+    function linha(rotulo, valor, classe) {
+      return '<div class="dica-linha"><span>' + rotulo + '</span><b' + (classe ? ' class="' + classe + '"' : '') + '>' + valor + '</b></div>';
+    }
+    document.addEventListener("mouseover", function (e) {
+      var alvo = e.target.closest && e.target.closest(".serie-grafico circle.alvo");
+      if (!alvo) return;
+      var caixa = alvo.closest(".serie-grafico").querySelector(".dica-serie"), d = alvo.dataset;
+      caixa.innerHTML = '<div class="dica-titulo">' + d.titulo + '</div>'
+        + linha("Desembarques", d.valor + " passageiros")
+        + '<div class="dica-sep"></div>'
+        + linha("vs. mês anterior", d.varMes, d.sinalMes)
+        + linha("vs. " + d.rotuloAno, d.varAno, d.sinalAno)
+        + '<div class="dica-sep"></div>'
+        + linha("Alta temporada", d.alta, d.alta === "sim" ? "sobe" : "")
+        + linha("Pandemia", d.pandemia)
+        + linha("Bloco", d.bloco)
+        + (d.origem ? linha("Origem", d.origem) : "");
+      var area = caixa.parentNode.getBoundingClientRect(), ponto = alvo.getBoundingClientRect();
+      caixa.style.display = "block";
+      var x = ponto.left - area.left + ponto.width / 2 + 12;
+      if (x + caixa.offsetWidth > area.width) x -= caixa.offsetWidth + 24;
+      caixa.style.left = Math.max(0, x) + "px";
+      caixa.style.top = Math.max(0, ponto.top - area.top - 20) + "px";
+      alvo.classList.add("ativo");
+    });
+    document.addEventListener("mouseout", function (e) {
+      var alvo = e.target.closest && e.target.closest(".serie-grafico circle.alvo");
+      if (!alvo) return;
+      alvo.classList.remove("ativo");
+      alvo.closest(".serie-grafico").querySelector(".dica-serie").style.display = "none";
+    });
+  })();
+
+  // Seletor de ano do gráfico da série: "Todos", ▲ ▼, o campo com a lista de
+  // anos (clique, setas ↑ ↓, Enter, Esc; digitar filtra) e o clique num ponto
+  // trocam só o gráfico, pedido ao servidor.
+  (function () {
+    var campo = document.getElementById("campo-ano");
+    if (!campo) return;
+    var min = +campo.dataset.min, max = +campo.dataset.max, atual = null, foco = -1;
+    var erro = document.getElementById("erro-ano");
+    var area = document.getElementById("grafico-serie");
+    var lista = document.getElementById("lista-anos");
+    var itens = Array.prototype.slice.call(lista.querySelectorAll(".item-ano"));
+    var vazia = lista.querySelector(".lista-vazia");
+
+    function visiveis() { return itens.filter(function (i) { return !i.hidden; }); }
+
+    function marcar_foco(k) {
+      var vis = visiveis();
+      foco = Math.max(0, Math.min(vis.length - 1, k));
+      itens.forEach(function (i) { i.classList.remove("foco"); });
+      if (vis[foco]) {
+        vis[foco].classList.add("foco");
+        vis[foco].scrollIntoView({block: "nearest"});
+        campo.setAttribute("aria-activedescendant", vis[foco].id);
+      }
+    }
+
+    function filtrar() {
+      var t = campo.value.trim(), digitos = /^\d+$/.test(t);
+      itens.forEach(function (i) { i.hidden = digitos && i.dataset.ano.indexOf(t) !== 0; });
+      var nenhum = visiveis().length === 0;
+      vazia.hidden = !nenhum;
+      vazia.textContent = nenhum ? 'Nenhum ano começa com "' + t + '".' : "";
+    }
+
+    function abrir_lista() {
+      if (lista.classList.contains("aberta")) return;
+      filtrar();
+      lista.classList.add("aberta");
+      campo.setAttribute("aria-expanded", "true");
+      var vis = visiveis(), k = vis.findIndex(function (i) { return +i.dataset.ano === atual; });
+      marcar_foco(k < 0 ? 0 : k);
+    }
+
+    function fechar_lista() {
+      lista.classList.remove("aberta");
+      campo.setAttribute("aria-expanded", "false");
+      campo.removeAttribute("aria-activedescendant");
+    }
+
+    function abrir(ano) {
+      erro.textContent = "";
+      fechar_lista();
+      fetch("{{ url_for('grafico_serie') }}" + (ano ? "?ano=" + ano : ""), {cache: "no-store"})
+        .then(function (r) { if (!r.ok) throw r; return r.text(); })
+        .then(function (html) {
+          area.innerHTML = html;
+          atual = ano;
+          campo.value = ano || "";
+          itens.forEach(function (i) {
+            var sel = +i.dataset.ano === ano;
+            i.classList.toggle("selecionado", sel);
+            i.setAttribute("aria-selected", sel ? "true" : "false");
+          });
+          var titulo = area.querySelector(".serie-grafico");
+          document.getElementById("titulo-grafico").textContent = titulo ? titulo.dataset.titulo : "";
+          document.getElementById("ano-todos").classList.toggle("ativo", !ano);
+          document.getElementById("ano-anterior").disabled = !!ano && ano <= min;
+          document.getElementById("ano-proximo").disabled = !!ano && ano >= max;
+        })
+        .catch(function () { erro.textContent = "Não foi possível abrir esse ano. Tente de novo."; });
+    }
+
+    campo.addEventListener("focus", abrir_lista);
+    campo.addEventListener("click", abrir_lista);
+    campo.addEventListener("input", function () {
+      erro.textContent = "";
+      lista.classList.remove("aberta");
+      abrir_lista();
+      marcar_foco(0);
+      var t = campo.value.trim();
+      if (/^\d{4}$/.test(t)) {
+        if (+t < min || +t > max) erro.textContent = "Ano fora da série: escolha de " + min + " a " + max + ".";
+        else if (+t !== atual) abrir(+t);
+      } else if (t && !/^\d+$/.test(t)) {
+        erro.textContent = "Digite o ano com 4 números, por exemplo " + max + ".";
+      }
+    });
+    campo.addEventListener("keydown", function (e) {
+      var aberta = lista.classList.contains("aberta");
+      if (e.key === "ArrowDown") { e.preventDefault(); if (!aberta) abrir_lista(); else marcar_foco(foco + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (aberta) marcar_foco(foco - 1); }
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        var vis = visiveis();
+        if (aberta && vis[foco]) abrir(+vis[foco].dataset.ano);
+      }
+      else if (e.key === "Escape") { fechar_lista(); campo.value = atual || ""; erro.textContent = ""; }
+    });
+    campo.addEventListener("blur", function () {
+      setTimeout(function () { fechar_lista(); if (!erro.textContent) campo.value = atual || ""; }, 150);
+    });
+    // mousedown (e não click) para escolher antes de o campo perder o foco
+    lista.addEventListener("mousedown", function (e) {
+      var item = e.target.closest(".item-ano");
+      e.preventDefault();
+      if (item) abrir(+item.dataset.ano);
+    });
+    lista.addEventListener("mousemove", function (e) {
+      var item = e.target.closest(".item-ano");
+      if (item) marcar_foco(visiveis().indexOf(item));
+    });
+
+    document.getElementById("ano-todos").addEventListener("click", function () { abrir(null); });
+    // ▲ ano seguinte, ▼ ano anterior; em "Todos", qualquer uma abre o ano mais recente
+    document.getElementById("ano-anterior").addEventListener("click", function () { abrir(atual ? atual - 1 : max); });
+    document.getElementById("ano-proximo").addEventListener("click", function () { abrir(atual ? atual + 1 : max); });
+    // na visão de todos os anos, clicar num ponto abre o ano dele
+    area.addEventListener("click", function (e) {
+      var alvo = e.target.closest("circle.alvo");
+      if (alvo && atual === null) abrir(+alvo.dataset.ano);
+    });
+  })();
+
+  // Fecha a caixa de ajuda pelo X ou ao clicar fora dela.
+  document.addEventListener("click", function (e) {
+    document.querySelectorAll("details.ajuda[open]").forEach(function (d) {
+      if (e.target.closest(".ajuda-fechar") || !d.contains(e.target)) d.open = false;
+    });
+  });
+</script>
+{% endblock %}

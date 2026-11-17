@@ -1,0 +1,19 @@
+# Ambiente e caches
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Diário de trabalho e documentação interna: ficam só na máquina do autor
+PROGRESS.md
+docs/
+
+# Dados: só a base real (a série e as 11 execuções do TCC) vai para o repositório
+dados/brutos/
+dados/backup/
+dados/modelos/
+dados/experimentos_demonstracao.db
+dados/historico_simulado_20anos.db
+
+# Figuras geradas pelos notebooks e scripts
+*.png

@@ -1,0 +1,24 @@
+{
+  "padrao": "real",
+  "bases": [
+    {
+      "id": "real",
+      "nome": "ANAC — dados reais",
+      "arquivo": "dados/experimentos.db",
+      "tipo": "real"
+    },
+    {
+      "id": "demonstracao",
+      "nome": "Base de demonstração e testes",
+      "arquivo": "dados/experimentos_demonstracao.db",
+      "tipo": "demonstracao"
+    },
+    {
+      "id": "historico20",
+      "nome": "ANAC + histórico simulado (20 anos)",
+      "arquivo": "dados/historico_simulado_20anos.db",
+      "tipo": "simulada",
+      "simulado_ate": "2019-02"
+    }
+  ]
+}

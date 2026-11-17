@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block titulo %}Execução nº {{ e.id }}{% endblock %}
+{% block conteudo %}
+
+<h1>Execução nº {{ e.id }} &mdash; {{ e.modelo }} <span class="selo ok">registrada</span></h1>
+<p class="intro">Tudo o que é necessário para reproduzir esta execução: configuração, modelo salvo, previsões e métricas (RF19, RNF08).</p>
+
+<div class="painel">
+  <h2>Configuração</h2>
+  <dl class="ficha">
+    <dt>Modelo</dt><dd>{{ e.modelo }}</dd>
+    <dt>Semente aleatória</dt><dd>{{ e.semente }}</dd>
+    <dt>Data / hora</dt><dd>{{ e.data|data_br }}</dd>
+    <dt>Período de teste</dt><dd>{{ e.periodo }}</dd>
+    <dt>Janela de entrada</dt><dd>{{ janela ~ ' meses' if janela else '—' }}</dd>
+    {% for k, v in hiperparametros.items() %}
+    <dt>{{ k }}</dt><dd>{{ v }}</dd>
+    {% endfor %}
+    <dt>Modelo salvo</dt><dd>{{ caminho_modelo or '—' }}{% if caminho_modelo and not modelo_existe %} <span class="selo pendente">arquivo ausente</span>{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="painel">
+  <h2>Métricas</h2>
+  <div class="rolagem">
+    <table>
+      <thead><tr><th>Métrica</th><th>Escopo global</th><th>Alta temporada</th></tr></thead>
+      <tbody>
+        <tr><td>MAE</td><td class="num">{{ e.mae_g|milhar }}</td><td class="num">{{ e.mae_a|milhar }}</td></tr>
+        <tr><td>RMSE</td><td class="num">{{ e.rmse_g|milhar }}</td><td class="num">{{ e.rmse_a|milhar }}</td></tr>
+        <tr><td>MAPE</td><td class="num">{{ e.mape_g|pct }}</td><td class="num">{{ e.mape_a|pct }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">MAE e RMSE em número de desembarques.</p>
+</div>
+
+<div class="painel">
+  <h2>Previsões no conjunto de teste
+    {% if reprevisao %}{% if diferenca is not none and diferenca < 0.5 %}<span class="selo ok">modelo recarregado: previsões idênticas</span>{% else %}<span class="selo alta">modelo recarregado: diferença de {{ diferenca|milhar }}</span>{% endif %}{% endif %}
+  </h2>
+  <div class="rolagem">
+    <table>
+      <thead><tr><th>Mês</th><th>Real</th><th>Previsto</th><th>Erro</th>{% if reprevisao %}<th>Previsto pelo modelo recarregado</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for p in previsoes %}
+        <tr>
+          <td>{{ p.mes }} {% if p.alta %}<span class="selo alta">alta</span>{% endif %}</td>
+          <td class="num">{{ p.real|milhar }}</td>
+          <td class="num">{{ p.previsto|milhar }}</td>
+          <td class="num">{{ p.erro_pct|pct(1) }}</td>
+          {% if reprevisao %}<td class="num">{{ p.recarregado|milhar }}</td>{% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">Erro = (real &minus; previsto) &divide; real; valores positivos indicam subestimação.</p>
+  <div class="campo" style="margin-top:14px">
+    <form method="post" action="{{ url_for('prever', id_execucao=e.id) }}" style="display:inline">
+      <button class="btn" type="submit" {% if not modelo_existe %}disabled{% endif %}>Prever com o modelo salvo</button>
+    </form>
+    <a class="btn sec" href="{{ url_for('comparar', ids=e.id) }}">Comparar</a>
+    <form method="post" action="{{ url_for('exportar') }}" style="display:inline">
+      <input type="hidden" name="ids" value="{{ e.id }}">
+      <button class="btn sec" type="submit">Exportar CSV</button>
+    </form>
+    <a class="btn sec" href="{{ url_for('historico') }}">Voltar ao histórico</a>
+  </div>
+  <p class="nota"><b>Prever com o modelo salvo</b> recarrega o modelo do disco e prevê o período de teste sem novo treinamento (<code>PrevisaoService.prever</code>). Previsões idênticas às registradas confirmam a reprodutibilidade da execução.</p>
+</div>
+
+{% endblock %}

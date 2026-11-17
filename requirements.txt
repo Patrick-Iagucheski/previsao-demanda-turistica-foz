@@ -1,0 +1,24 @@
+# Núcleo de dados e ML
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.5.2
+statsmodels==0.14.4
+matplotlib==3.9.2
+
+# Deep learning (LSTM)
+tensorflow==2.18.0
+
+# Interface e persistência
+flask==3.1.0
+SQLAlchemy==2.0.36
+
+# Exploração
+jupyter==1.1.1
+notebook==7.3.1
+
+# Testes de significância / utilidades
+scipy==1.14.1
+
+# Documentação (opcional) — captura das telas para o TCC (docs/capturar_telas.py)
+playwright==1.62.0
+joblib==1.5.3

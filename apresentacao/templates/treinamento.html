@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block titulo %}Treinar modelo{% endblock %}
+{% block cabecalho %}{% if em_andamento %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+{% block conteudo %}
+
+<h1>Treinamento de modelo <span class="selo ok">funcional</span></h1>
+<p class="intro">Divide a série cronologicamente, treina o modelo escolhido, salva o modelo em disco e registra a execução no banco.</p>
+
+{% if tarefa %}
+<div class="painel">
+  <h2>Treinamento {% if em_andamento %}em andamento{% elif tarefa.estado == 'concluida' %}concluído{% else %}interrompido{% endif %}</h2>
+  {% if em_andamento %}
+  <div class="andamento">
+    <span class="giro" aria-hidden="true"></span>
+    <span><b>{{ tarefa.modelo }}</b> · semente {{ tarefa.semente }} · {{ tarefa.configuracao }} &mdash; {{ decorrido }} s decorridos (duração típica: {{ tarefa.duracao }}).</span>
+  </div>
+  <p class="nota">Esta página se atualiza sozinha a cada 5 segundos. O treinamento continua mesmo que você navegue para outra tela.</p>
+  {% elif tarefa.estado == 'concluida' %}
+  <p style="margin:0;font-size:13px"><b>{{ tarefa.modelo }}</b> · semente {{ tarefa.semente }} · {{ tarefa.configuracao }} &mdash; concluído em {{ decorrido }} s e registrado como <a href="{{ url_for('execucao', id_execucao=tarefa.id_execucao) }}">execução nº {{ tarefa.id_execucao }}</a>.</p>
+  {% else %}
+  <p style="margin:0;font-size:13px;color:var(--ambar)"><b>Erro:</b> {{ tarefa.erro }}</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="painel">
+  <h2>Configuração do experimento</h2>
+  <form method="post" action="{{ url_for('treinar') }}" id="form-treino">
+    <div class="campo">
+      <label>Modelo</label>
+      <div class="radios">
+        <label><input type="radio" name="modelo" value="naive" checked> Baseline <i>naïve</i> sazonal</label>
+        <label><input type="radio" name="modelo" value="random_forest"> Random Forest</label>
+        <label><input type="radio" name="modelo" value="lstm"> LSTM</label>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="semente">Semente aleatória</label>
+      <input type="number" id="semente" name="semente" value="{{ semente }}" min="0" style="width:88px">
+      <label style="margin-left:14px">Conjunto de teste</label>
+      <input type="text" value="{{ periodo_teste }}" style="width:170px" disabled title="Fixado pela metodologia (RN04)">
+    </div>
+
+    <div class="grupo" data-modelo="naive">
+      <p class="titulo">Hiperparâmetros &mdash; <i>naïve</i> sazonal</p>
+      <span style="font-size:13px">Defasagem sazonal de 12 meses, fixa por definição. Duração típica: {{ duracao.naive }}.</span>
+    </div>
+
+    <div class="grupo" data-modelo="random_forest">
+      <p class="titulo">Hiperparâmetros &mdash; Random Forest</p>
+      <div class="campo">
+        <label><input type="radio" name="ajuste_rf" value="auto" checked> Busca automática por validação temporal (16 configurações) &mdash; {{ duracao.rf_auto }}</label>
+      </div>
+      <div class="campo" style="margin-bottom:0">
+        <label><input type="radio" name="ajuste_rf" value="fixo"> Configuração fixa:</label>
+        <label for="n_estimators">árvores</label>
+        <select name="n_estimators" id="n_estimators"><option>200</option><option>500</option></select>
+        <label for="max_depth">profundidade</label>
+        <select name="max_depth" id="max_depth"><option>2</option><option selected>3</option><option>5</option><option value="none">sem limite</option></select>
+        <span style="font-size:12px;color:var(--cinza)">&mdash; {{ duracao.rf_fixo }}</span>
+      </div>
+    </div>
+
+    <div class="grupo" data-modelo="lstm">
+      <p class="titulo">Hiperparâmetros &mdash; LSTM</p>
+      <div class="campo">
+        <label><input type="radio" name="ajuste_lstm" value="auto" checked> Busca automática por validação temporal (6 configurações) &mdash; {{ duracao.lstm_auto }}</label>
+      </div>
+      <div class="campo" style="margin-bottom:0">
+        <label><input type="radio" name="ajuste_lstm" value="fixo"> Configuração fixa:</label>
+        <label for="unidades">unidades</label>
+        <select name="unidades" id="unidades"><option>8</option><option selected>16</option><option>32</option></select>
+        <label for="dropout">dropout</label>
+        <select name="dropout" id="dropout"><option value="0.0">0</option><option value="0.2" selected>0,2</option></select>
+        <span style="font-size:12px;color:var(--cinza)">&mdash; {{ duracao.lstm_fixo }}</span>
+      </div>
+      <p class="nota">Lookback de 3 meses (as janelas não atravessam o intervalo pandêmico — RNF03). O número de épocas é definido por parada antecipada.</p>
+    </div>
+
+    <button class="btn" type="submit" {% if em_andamento or not serie_carregada %}disabled{% endif %}>Treinar modelo</button>
+    {% if em_andamento %}<span class="nota" style="margin-left:10px">Aguarde o treinamento em andamento.</span>{% endif %}
+  </form>
+</div>
+
+<div class="painel">
+  <h2>Resultado da execução {% if resultado %}<span class="selo ok">nº {{ resultado.id }}</span>{% endif %}</h2>
+  {% if resultado %}
+  <p style="margin:0 0 10px;font-size:13px;color:var(--cinza)">
+    {% if do_ultimo_treino %}Execução recém-treinada{% else %}Última execução registrada{% endif %}:
+    <b style="color:var(--tinta)">{{ resultado.modelo }}</b> · semente {{ resultado.semente }} · {{ resultado.data|data_br }} · teste {{ resultado.periodo }}
+  </p>
+  {% endif %}
+  <div class="rolagem">
+    <table>
+      <thead><tr><th>Métrica</th><th>Escopo global</th><th>Alta temporada</th></tr></thead>
+      <tbody>
+        <tr><td>MAE</td><td class="num">{{ resultado.mae_g|milhar if resultado else '—' }}</td><td class="num">{{ resultado.mae_a|milhar if resultado else '—' }}</td></tr>
+        <tr><td>RMSE</td><td class="num">{{ resultado.rmse_g|milhar if resultado else '—' }}</td><td class="num">{{ resultado.rmse_a|milhar if resultado else '—' }}</td></tr>
+        <tr><td>MAPE</td><td class="num">{{ resultado.mape_g|pct if resultado else '—' }}</td><td class="num">{{ resultado.mape_a|pct if resultado else '—' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% if resultado %}
+  <p class="nota">MAE e RMSE em número de desembarques. <a href="{{ url_for('execucao', id_execucao=resultado.id) }}">Ver detalhes da execução</a> · <a href="{{ url_for('comparar') }}">comparar modelos</a></p>
+  {% else %}
+  <p class="nota">Sem execução registrada. As métricas aparecem aqui após o primeiro treinamento.</p>
+  {% endif %}
+</div>
+
+{% if not serie_carregada %}
+<div class="pendencia">
+  <b>Pré-requisito:</b> nenhuma série carregada. O caso de uso <i>Treinar modelos</i> inclui <i>Preparar série temporal</i>, que por sua vez inclui <i>Importar dados da ANAC</i>.
+</div>
+{% endif %}
+
+<script>
+// Mostra só os hiperparâmetros do modelo escolhido (sem script, todos aparecem).
+(function () {
+  var form = document.getElementById("form-treino");
+  function atualizar() {
+    var escolhido = form.querySelector('input[name="modelo"]:checked').value;
+    form.querySelectorAll(".grupo").forEach(function (g) {
+      g.hidden = g.getAttribute("data-modelo") !== escolhido;
+    });
+  }
+  form.querySelectorAll('input[name="modelo"]').forEach(function (r) {
+    r.addEventListener("change", atualizar);
+  });
+  atualizar();
+})();
+</script>
+
+{% endblock %}

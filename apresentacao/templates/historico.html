@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titulo %}Histórico de execuções{% endblock %}
+{% block conteudo %}
+
+<h1>Histórico de execuções <span class="selo ok">funcional</span></h1>
+<p class="intro">Todas as execuções registradas no banco, com semente e hiperparâmetros, para reprodução e comparação.</p>
+
+<div class="painel">
+  <h2>Execuções registradas &mdash; {{ execucoes|length }}</h2>
+  <form method="get" action="{{ url_for('comparar') }}">
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr><th></th><th>Nº</th><th>Data / hora</th><th>Modelo</th><th>Semente</th><th>MAPE global</th><th>MAPE alta temporada</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for e in execucoes %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ e.id }}" aria-label="Selecionar execução {{ e.id }}"></td>
+          <td class="num">{{ e.id }}</td>
+          <td>{{ e.data|data_br }}</td>
+          <td>{{ e.modelo }}</td>
+          <td class="num">{{ e.semente }}</td>
+          <td class="num">{{ e.mape_g|pct }}</td>
+          <td class="num">{{ e.mape_a|pct }}</td>
+          <td><a class="btn sec mini" href="{{ url_for('execucao', id_execucao=e.id) }}">Detalhes</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="vazio" style="text-align:center;padding:28px;white-space:normal">
+          Nenhuma execução registrada. O histórico é alimentado a cada treinamento concluído.
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="campo" style="margin-top:15px">
+    <button class="btn" type="submit" {% if not execucoes %}disabled{% endif %}>Comparar selecionadas</button>
+    <button class="btn sec" type="submit" formmethod="post" formaction="{{ url_for('exportar') }}" {% if not execucoes %}disabled{% endif %}>Exportar CSV</button>
+    <span class="nota" style="margin:0">Marque até três execuções para comparar, ou quantas quiser para exportar.</span>
+  </div>
+  </form>
+</div>
+
+<div class="painel">
+  <h2>Por que esta tela existe</h2>
+  <p style="margin:0;font-size:13px;color:var(--cinza)">
+    Cada execução fica registrada com modelo, hiperparâmetros, semente, data e o caminho do modelo salvo.
+    É o que torna o experimento auditável: nenhuma tentativa pode ser omitida, e qualquer resultado reportado
+    no trabalho pode ser reconstituído exatamente. Atende aos requisitos RF19, RF21 e RNF08.
+  </p>
+</div>
+
+{% endblock %}
