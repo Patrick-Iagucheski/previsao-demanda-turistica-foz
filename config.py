@@ -7,6 +7,7 @@ As regras de negócio do domínio (RN02 pandemia, RN03 alta temporada e blocos
 temporais) ficam em dominio/regras.py, e não aqui.
 """
 import json
+import os
 from pathlib import Path
 
 # ----------------------------------------------------------------------
@@ -15,11 +16,11 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 DADOS_BRUTOS = RAIZ / "dados" / "brutos"
 
-# Onde estão os CSV originais da ANAC (fora do projeto, no OneDrive).
-# O loader copia/lê a partir daqui.
-ANAC_ORIGEM = Path(
-    r"C:\Dados_Anac"
-)
+# Onde estão os CSV originais da ANAC. Padrão: dados/brutos, dentro do projeto.
+# Outra pasta pode ser indicada pela variável de ambiente ANAC_ORIGEM
+# (na máquina do autor: C:\Dados_Anac), sem editar o código, ou digitada no
+# campo "Pasta dos CSV" da tela de importação.
+ANAC_ORIGEM = Path(os.environ.get("ANAC_ORIGEM") or DADOS_BRUTOS)
 
 BANCO = RAIZ / "dados" / "experimentos.db"
 

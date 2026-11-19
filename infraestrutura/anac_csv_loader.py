@@ -111,7 +111,7 @@ def listar_csvs(origem: Path = None) -> List[Path]:
     pela validação da extração, para que os dois métodos leiam os mesmos arquivos."""
     origem = Path(origem or config.ANAC_ORIGEM)
 
-    # só a pasta e um nível abaixo (ex.: Dados_Anac\2019\...), nunca o disco inteiro
+    # só a pasta e um nível abaixo (ex.: brutos\2019\...), nunca o disco inteiro
     por_mes = {}
     for arq in [*origem.glob("*.csv"), *origem.glob("*/*.csv")]:
         m = PADRAO_NOME.match(arq.name)
@@ -122,7 +122,8 @@ def listar_csvs(origem: Path = None) -> List[Path]:
         raise FileNotFoundError(
             f"Nenhum arquivo da ANAC foi encontrado em {origem}.\n"
             "Informe a pasta que contém os CSV mensais (Movimentacoes_Aeroportuarias_AAAAMM.csv), "
-            "diretamente ou em pastas por ano, por exemplo C:\\Dados_Anac.")
+            "diretamente ou em pastas por ano. A pasta padrão é dados/brutos; outra pasta pode ser "
+            "digitada no campo acima ou indicada pela variável de ambiente ANAC_ORIGEM.")
 
     repetidos = [f"{a}-{m:02d}: " + " e ".join(str(p) for p in ps)
                  for (a, m), ps in sorted(por_mes.items()) if len(ps) > 1]

@@ -39,7 +39,10 @@ pip install -r requirements.txt
 Os arquivos originais da ANAC (cerca de 2 GB) não estão no repositório. Eles são públicos e
 estão no portal de dados abertos da agência, em
 [Dados de Movimentação Aeroportuária](https://sistemas.anac.gov.br/dadosabertos/Operador%20Aeroportu%C3%A1rio/Dados%20de%20Movimenta%C3%A7%C3%A3o%20Aeroportu%C3%A1rias/).
-A pasta onde ficam é definida em `config.py` (`ANAC_ORIGEM`, hoje `C:\Dados_Anac`).
+Para importar, coloque os CSV em `dados/brutos` (pasta padrão; veja o `LEIA-ME.txt` dela) ou
+indique outra pasta no campo "Pasta dos CSV" da tela de importação. Também é possível fixar
+outra pasta pela variável de ambiente `ANAC_ORIGEM`, sem editar o código; no Windows:
+`setx ANAC_ORIGEM C:\caminho\da\pasta` (vale para os terminais abertos depois).
 
 Os CSV só são necessários para importar a série de novo: a base incluída
 (`dados/experimentos.db`) já tem a série mensal e as 11 execuções do experimento.

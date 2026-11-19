@@ -9,7 +9,8 @@ PROGRESS.md
 docs/
 
 # Dados: só a base real (a série e as 11 execuções do TCC) vai para o repositório
-dados/brutos/
+dados/brutos/*
+!dados/brutos/LEIA-ME.txt
 dados/backup/
 dados/modelos/
 dados/experimentos_demonstracao.db

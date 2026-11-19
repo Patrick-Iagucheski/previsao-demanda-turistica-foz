@@ -51,7 +51,7 @@ class IForecaster(ABC):
 
     def hiperparametros(self) -> dict:
         """Hiperparâmetros efetivamente usados, para registro da execução
-        (RF19 / RNF01 — reprodutibilidade)."""
+        (RF19 / RNF01: reprodutibilidade)."""
         return {}
 
 

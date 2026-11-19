@@ -1,0 +1,15 @@
+Pasta padrão dos arquivos da ANAC
+
+Coloque aqui os CSV mensais da ANAC (Movimentacoes_Aeroportuarias_AAAAMM.csv),
+soltos ou em pastas por ano (2019, 2020, ...). São 82 arquivos, cerca de 2 GB.
+
+Fonte: portal de dados abertos da ANAC, Dados de Movimentação Aeroportuária:
+https://sistemas.anac.gov.br/dadosabertos/Operador%20Aeroportu%C3%A1rio/Dados%20de%20Movimenta%C3%A7%C3%A3o%20Aeroportu%C3%A1rias/
+
+Os CSV não vão para o repositório: o .gitignore deixa subir só este arquivo.
+Eles só são necessários para importar a série de novo; a base dados/experimentos.db
+já tem a série mensal e as 11 execuções do experimento.
+
+Para usar outra pasta, sem mover os arquivos:
+- digite a pasta no campo "Pasta dos CSV" da tela de importação; ou
+- defina a variável de ambiente ANAC_ORIGEM com o caminho da pasta.
