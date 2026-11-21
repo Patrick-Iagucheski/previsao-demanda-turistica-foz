@@ -1,0 +1,21 @@
+Script: testes/teste_modelos_salvos.py
+Executado em: 20/11/2026 12:51 (Windows 11, Python 3.12.2)
+Código do sistema testado: commit b022c47 do repositório (b022c474b188a2bbdd3739654e498c974a223993), sem alterações locais nos módulos do sistema
+Banco: cópia temporária de dados/experimentos.db (o original não é alterado)
+Duração: 45 s | código de saída: 0
+------------------------------------------------------------------------------
+  [ok] execução  1 (NAIVE, semente 42): 12 previsões, maior diferença 0.000000 (0.0 s)
+  [ok] execução  2 (RANDOM_FOREST, semente 42): 12 previsões, maior diferença 0.000000 (15.0 s)
+  [ok] execução  3 (RANDOM_FOREST, semente 43): 12 previsões, maior diferença 0.000000 (0.0 s)
+  [ok] execução  4 (RANDOM_FOREST, semente 44): 12 previsões, maior diferença 0.000000 (0.1 s)
+  [ok] execução  5 (RANDOM_FOREST, semente 45): 12 previsões, maior diferença 0.000000 (0.0 s)
+  [ok] execução  6 (RANDOM_FOREST, semente 46): 12 previsões, maior diferença 0.000000 (0.1 s)
+  [ok] execução  7 (LSTM, semente 42): 12 previsões, maior diferença 0.000000 (21.3 s)
+  [ok] execução  8 (LSTM, semente 43): 12 previsões, maior diferença 0.000000 (0.4 s)
+  [ok] execução  9 (LSTM, semente 44): 12 previsões, maior diferença 0.000000 (0.3 s)
+  [ok] execução 10 (LSTM, semente 45): 12 previsões, maior diferença 0.000000 (0.3 s)
+  [ok] execução 11 (LSTM, semente 46): 12 previsões, maior diferença 0.000000 (0.3 s)
+RESULTADO: 132 previsões; tudo certo
+
+[saída de erro]
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001C2EA9DA200> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.

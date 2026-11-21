@@ -1,0 +1,64 @@
+Script: testes/teste_telas.py
+Executado em: 20/11/2026 12:52 (Windows 11, Python 3.12.2)
+Código do sistema testado: commit b022c47 do repositório (b022c474b188a2bbdd3739654e498c974a223993), sem alterações locais nos módulos do sistema
+Banco: cópia temporária de dados/experimentos.db (o original não é alterado)
+Duração: 109 s | código de saída: 0
+------------------------------------------------------------------------------
+1. Telas respondem e não há mais 'aguarda conexão'
+  [ok] / -> 200
+  [ok] /treinamento -> 200
+  [ok] /comparacao -> 200
+  [ok] /historico -> 200
+  [ok] /execucao/2 -> 200
+  [ok] execução inexistente -> 404
+2. Histórico lista o banco
+  [ok] 11 execuções na tabela (11)
+3. Comparação padrão = resultado principal (1, 2, 7)
+  [ok] pré-seleciona 1, 2 e 7
+  [ok] 4 linhas no gráfico (4)
+  [ok] veredito DM conforme a Seção 3.7
+  [ok] valores-p iguais aos do Cap. 5 (0,179 e 0,537)
+  [ok] 2 execuções do mesmo modelo: 2ª tracejada
+4. Detalhes + prever com o modelo salvo (sem retreinar)
+  [ok] RF recarregado reproduz as previsões (0.9s)
+5. Exportar CSV
+  [ok] download attachment; filename="execucoes_1-2.csv"
+  [ok] 39 linhas (esperado 39)
+  [ok] exportar sem seleção avisa
+6. Validação do formulário de treino
+  [ok] valor fora das opções é rejeitado
+  [ok] modelo desconhecido é rejeitado
+7. Treinamentos pela tela (em segundo plano)
+  [ok] naïve: estado=concluida execução=12 em 2s 
+  [ok] RF fixo: estado=concluida execução=13 em 4s 
+  [ok] LSTM fixa: estado=concluida execução=14 em 60s 
+  [ok] cópia do banco agora tem 14 execuções (11 + 3)
+  [ok] um treinamento por vez (RF em curso recusa o 2º pedido)
+8. Importação
+  [ok] pasta inexistente é recusada
+  [ok] pasta sem CSV da ANAC (C:\) é recusada sem varrer o disco
+  [ok] mês duplicado é recusado (não soma em dobro)
+  [ok] CSV sem as colunas da ANAC é recusado
+  [ok] nenhuma importação recusada alterou a série (mar/2019 = 96.792)
+  [ok] importação roda em segundo plano e a tela mostra o andamento
+  [ok] barra de progresso: 1 de 82 arquivos
+  [ok] gráfico parcial durante a leitura (1 meses desenhados)
+  [ok] uma importação por vez
+  [ok] não treina durante a importação
+  [ok] IngestaoService importa os 81 meses (23s)
+  [ok] gráfico parcial termina igual à série gravada (81 meses)
+  [ok] abas Gráfico/Tabela e linhas coloridas (11 de alta, 38 da pandemia)
+8b. Gráfico da série: um ano ampliado
+  [ok] ano 2024: 12 meses, 2023 de comparação e o valor de jan (94,5 mil)
+  [ok] ano fora da série (404) e ano inválido (400) são recusados
+  [ok] Todos: os 81 meses
+9. Seletor de base
+  [ok] troca para a base simulada e a tela sinaliza dados simulados
+  [ok] não troca de base durante um treinamento
+  [ok] volta para a base real
+  [ok] banco REAL intacto (11)
+
+RESULTADO: tudo certo
+
+[saída de erro]
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001B78DDE8720> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.

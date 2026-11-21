@@ -29,7 +29,7 @@
     <p class="nota"><span id="andamento-pct">{{ percentual }}</span>% · o gráfico abaixo se monta a cada arquivo lido.</p>
     <div class="grafico" id="grafico-parcial" style="margin-top:12px">{% if figura_parcial %}{% with g = figura_parcial %}{% include "_grafico_serie.html" %}{% endwith %}{% else %}<p class="nota" style="margin:0">Aguardando o primeiro arquivo&hellip;</p>{% endif %}</div>
   {% elif tarefa.estado == 'concluida' %}
-    <p style="margin:0;font-size:13px">Importação concluída: {{ tarefa.resumo }} gravados no banco, em {{ decorrido }} s.</p>
+    <p style="margin:0;font-size:0.925rem">Importação concluída: {{ tarefa.resumo }} gravados no banco, em {{ decorrido }} s.</p>
   {% else %}
     <div class="aviso erro" style="margin:0">
       <b>Não foi possível importar.</b>
@@ -44,13 +44,13 @@
 <div class="painel">
   <h2>Resultado da importação {% if base_ativa.tipo == 'simulada' %}<span class="selo alta">dados simulados até {{ base_ativa.simulado_ate|mes_ano }}</span>{% else %}<span class="selo ok">dados reais</span>{% endif %}</h2>
   <dl class="numeros">
-    <div><dt>Aeroporto</dt><dd style="font-size:17px">{{ resumo.iata }} / {{ resumo.icao }}<small>{{ resumo.aeroporto }}</small></dd></div>
-    <div><dt>Período</dt><dd style="font-size:15px">{{ resumo.periodo }}<small>cobertura da série</small></dd></div>
+    <div><dt>Aeroporto</dt><dd style="font-size:1.2rem">{{ resumo.iata }} / {{ resumo.icao }}<small>{{ resumo.aeroporto }}</small></dd></div>
+    <div><dt>Período</dt><dd style="font-size:1.075rem">{{ resumo.periodo }}<small>cobertura da série</small></dd></div>
     <div><dt>Meses com registro</dt><dd>{{ resumo.meses_registro }}<small>série consolidada</small></dd></div>
     <div><dt>Fora da pandemia</dt><dd>{{ resumo.utilizaveis }}<small>utilizáveis na modelagem</small></dd></div>
     <div><dt>Alta temporada</dt><dd>{{ resumo.alta_temporada }}<small>meses jan/jul/dez</small></dd></div>
     {% set i = integridade %}
-    <div><dt>Integridade (RF04)</dt><dd style="color:{{ 'var(--ok)' if i.integra else 'var(--ambar)' }};font-size:17px">{{ 'OK' if i.integra else 'ATENÇÃO' }}<small>{{ i.duplicidades|length }} duplicidade(s) · {{ i.valores_invalidos|length }} valor(es) inválido(s) · {% if i.lacunas %}{{ i.lacunas|length }} mês(es) ausente(s): {% for l in i.lacunas %}{{ l.mes|mes_ano }}{{ ' (na pandemia)' if l.na_pandemia else ' (FORA da pandemia)' }}{{ ', ' if not loop.last }}{% endfor %}{% else %}sem lacunas{% endif %}</small></dd></div>
+    <div><dt>Integridade (RF04)</dt><dd style="color:{{ 'var(--ok)' if i.integra else 'var(--ambar)' }};font-size:1.2rem">{{ 'OK' if i.integra else 'ATENÇÃO' }}<small>{{ i.duplicidades|length }} duplicidade(s) · {{ i.valores_invalidos|length }} valor(es) inválido(s) · {% if i.lacunas %}{{ i.lacunas|length }} mês(es) ausente(s): {% for l in i.lacunas %}{{ l.mes|mes_ano }}{{ ' (na pandemia)' if l.na_pandemia else ' (FORA da pandemia)' }}{{ ', ' if not loop.last }}{% endfor %}{% else %}sem lacunas{% endif %}</small></dd></div>
   </dl>
 
   <h2 style="margin-top:20px">Blocos temporais</h2>
@@ -187,7 +187,7 @@
       </div>
     </details>
   </h2>
-  <p style="margin:0;font-size:13px;color:var(--cinza)">
+  <p style="margin:0;font-size:0.925rem;color:var(--cinza)">
     Os dados usados pelo sistema são coletados dos arquivos CSV de movimentações aeroportuárias publicados pela ANAC. De cada arquivo
     são extraídos os desembarques nos voos com destino ao Aeroporto Internacional de Foz do Iguaçu (SBFI), somados mês a mês, formando a
     série histórica usada no treinamento e na avaliação do Random Forest e da LSTM, além do modelo de referência (naïve). Cada mês recebe

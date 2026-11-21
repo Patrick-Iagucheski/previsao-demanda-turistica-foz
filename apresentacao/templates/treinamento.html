@@ -16,9 +16,9 @@
   </div>
   <p class="nota">Esta página se atualiza sozinha a cada 5 segundos. O treinamento continua mesmo que você navegue para outra tela.</p>
   {% elif tarefa.estado == 'concluida' %}
-  <p style="margin:0;font-size:13px"><b>{{ tarefa.modelo }}</b> · semente {{ tarefa.semente }} · {{ tarefa.configuracao }} &mdash; concluído em {{ decorrido }} s e registrado como <a href="{{ url_for('execucao', id_execucao=tarefa.id_execucao) }}">execução nº {{ tarefa.id_execucao }}</a>.</p>
+  <p style="margin:0;font-size:0.925rem"><b>{{ tarefa.modelo }}</b> · semente {{ tarefa.semente }} · {{ tarefa.configuracao }} &mdash; concluído em {{ decorrido }} s e registrado como <a href="{{ url_for('execucao', id_execucao=tarefa.id_execucao) }}">execução nº {{ tarefa.id_execucao }}</a>.</p>
   {% else %}
-  <p style="margin:0;font-size:13px;color:var(--ambar)"><b>Erro:</b> {{ tarefa.erro }}</p>
+  <p style="margin:0;font-size:0.925rem;color:var(--ambar)"><b>Erro:</b> {{ tarefa.erro }}</p>
   {% endif %}
 </div>
 {% endif %}
@@ -44,7 +44,7 @@
 
     <div class="grupo" data-modelo="naive">
       <p class="titulo">Hiperparâmetros &mdash; <i>naïve</i> sazonal</p>
-      <span style="font-size:13px">Defasagem sazonal de 12 meses, fixa por definição. Duração típica: {{ duracao.naive }}.</span>
+      <span style="font-size:0.925rem">Defasagem sazonal de 12 meses, fixa por definição. Duração típica: {{ duracao.naive }}.</span>
     </div>
 
     <div class="grupo" data-modelo="random_forest">
@@ -58,7 +58,7 @@
         <select name="n_estimators" id="n_estimators"><option>200</option><option>500</option></select>
         <label for="max_depth">profundidade</label>
         <select name="max_depth" id="max_depth"><option>2</option><option selected>3</option><option>5</option><option value="none">sem limite</option></select>
-        <span style="font-size:12px;color:var(--cinza)">&mdash; {{ duracao.rf_fixo }}</span>
+        <span style="font-size:0.85rem;color:var(--cinza)">&mdash; {{ duracao.rf_fixo }}</span>
       </div>
     </div>
 
@@ -73,7 +73,7 @@
         <select name="unidades" id="unidades"><option>8</option><option selected>16</option><option>32</option></select>
         <label for="dropout">dropout</label>
         <select name="dropout" id="dropout"><option value="0.0">0</option><option value="0.2" selected>0,2</option></select>
-        <span style="font-size:12px;color:var(--cinza)">&mdash; {{ duracao.lstm_fixo }}</span>
+        <span style="font-size:0.85rem;color:var(--cinza)">&mdash; {{ duracao.lstm_fixo }}</span>
       </div>
       <p class="nota">Lookback de 3 meses (as janelas não atravessam o intervalo pandêmico — RNF03). O número de épocas é definido por parada antecipada.</p>
     </div>
@@ -86,7 +86,7 @@
 <div class="painel">
   <h2>Resultado da execução {% if resultado %}<span class="selo ok">nº {{ resultado.id }}</span>{% endif %}</h2>
   {% if resultado %}
-  <p style="margin:0 0 10px;font-size:13px;color:var(--cinza)">
+  <p style="margin:0 0 10px;font-size:0.925rem;color:var(--cinza)">
     {% if do_ultimo_treino %}Execução recém-treinada{% else %}Última execução registrada{% endif %}:
     <b style="color:var(--tinta)">{{ resultado.modelo }}</b> · semente {{ resultado.semente }} · {{ resultado.data|data_br }} · teste {{ resultado.periodo }}
   </p>

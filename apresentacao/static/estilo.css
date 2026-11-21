@@ -1,5 +1,7 @@
 /* Sistema de Previsão de Demanda Turística — folha de estilo
-   Paleta: petróleo/teal (dado) + âmbar (alta temporada) */
+   Paleta: petróleo/teal (dado) + âmbar (alta temporada)
+   Tamanhos de fonte em rem (base de 16px no html), para boa leitura em 1366x768;
+   rótulos e títulos de tabela com no mínimo 0.8rem. */
 
 :root{
   --escuro:#0b3c49;
@@ -20,12 +22,13 @@
 }
 
 *{box-sizing:border-box}
+html{font-size:16px}
 body{
   margin:0;
   background:var(--claro);
   color:var(--tinta);
-  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  font-size:14px;
+  font-family:'Segoe UI', system-ui, sans-serif;
+  font-size:1rem;
   line-height:1.55;
 }
 
@@ -36,27 +39,27 @@ header{
 }
 header .marca{
   color:var(--branco);
-  font-size:15px;
+  font-size:1.075rem;
   font-weight:600;
   letter-spacing:.2px;
   margin-bottom:2px;
 }
 header .sub{
   color:var(--teal-claro);
-  font-size:12px;
+  font-size:0.85rem;
   margin-bottom:12px;
 }
 /* seletor da base de dados, no canto direito do cabeçalho */
 .seletor-base{float:right;display:flex;align-items:center;gap:8px;margin-top:2px}
-.seletor-base label{color:var(--teal-claro);font-size:12px}
-.seletor-base select{font:inherit;font-size:12.5px;padding:5px 8px;border-radius:5px;
+.seletor-base label{color:var(--teal-claro);font-size:0.85rem}
+.seletor-base select{font:inherit;font-size:0.9rem;padding:5px 8px;border-radius:5px;
   border:1px solid var(--teal);background:var(--escuro);color:var(--branco)}
 nav{display:flex;gap:3px}
 nav a{
   color:var(--teal-claro);
   text-decoration:none;
   padding:9px 17px;
-  font-size:13.5px;
+  font-size:0.975rem;
   border-radius:5px 5px 0 0;
 }
 nav a:hover{background:rgba(255,255,255,.08);color:#fff}
@@ -69,12 +72,12 @@ nav a.ativo{
 main{max-width:1120px;margin:0 auto;padding:24px 26px 60px}
 
 h1{
-  font-size:20px;
+  font-size:1.425rem;
   margin:0 0 4px;
   color:var(--escuro);
 }
 h1 .selo{vertical-align:middle;margin-left:9px}
-p.intro{margin:0 0 20px;color:var(--cinza);font-size:13.5px}
+p.intro{margin:0 0 20px;color:var(--cinza);font-size:0.975rem}
 
 /* ---------- painéis ---------- */
 .painel{
@@ -85,7 +88,7 @@ p.intro{margin:0 0 20px;color:var(--cinza);font-size:13.5px}
   margin-bottom:16px;
 }
 .painel h2{
-  font-size:11px;
+  font-size:0.8rem;
   letter-spacing:.09em;
   text-transform:uppercase;
   color:var(--cinza);
@@ -99,13 +102,13 @@ p.intro{margin:0 0 20px;color:var(--cinza);font-size:13.5px}
 
 /* ---------- formulário ---------- */
 .campo{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:12px}
-label{font-size:13px;color:var(--tinta);font-weight:500}
+label{font-size:0.925rem;color:var(--tinta);font-weight:500}
 input[type=text],input[type=number],select{
   border:1px solid var(--linha);
   border-radius:5px;
   padding:7px 10px;
   font-family:Consolas,"Courier New",monospace;
-  font-size:12.5px;
+  font-size:0.9rem;
   color:var(--tinta);
   background:var(--branco);
 }
@@ -118,7 +121,7 @@ input:disabled,select:disabled{background:var(--pendente-fundo);color:var(--cinz
   color:#fff;
   border-radius:5px;
   padding:8px 17px;
-  font-size:13px;
+  font-size:0.925rem;
   font-weight:600;
   cursor:pointer;
   font-family:inherit;
@@ -149,7 +152,7 @@ input:disabled,select:disabled{background:var(--pendente-fundo);color:var(--cinz
   padding:12px 14px;
 }
 .numeros dt{
-  font-size:10.5px;
+  font-size:0.8rem;
   letter-spacing:.06em;
   text-transform:uppercase;
   color:var(--cinza);
@@ -157,14 +160,14 @@ input:disabled,select:disabled{background:var(--pendente-fundo);color:var(--cinz
 }
 .numeros dd{
   margin:0;
-  font-size:22px;
+  font-size:1.575rem;
   font-weight:700;
   color:var(--teal);
   font-variant-numeric:tabular-nums;
 }
 .numeros dd small{
   display:block;
-  font-size:11.5px;
+  font-size:0.825rem;
   font-weight:400;
   color:var(--cinza);
   margin-top:3px;
@@ -172,11 +175,11 @@ input:disabled,select:disabled{background:var(--pendente-fundo);color:var(--cinz
 
 /* ---------- tabelas ---------- */
 .rolagem{overflow-x:auto;border:1px solid var(--linha);border-radius:6px}
-table{border-collapse:collapse;width:100%;font-size:12.5px}
+table{border-collapse:collapse;width:100%;font-size:0.9rem}
 th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--linha-fraca);white-space:nowrap}
 thead th{
   background:var(--claro);
-  font-size:10px;
+  font-size:0.8rem;
   letter-spacing:.07em;
   text-transform:uppercase;
   color:var(--cinza);
@@ -190,7 +193,7 @@ td.vazio{color:var(--cinza);font-style:italic}
 /* ---------- selos ---------- */
 .selo{
   display:inline-block;
-  font-size:10px;
+  font-size:0.8rem;
   letter-spacing:.06em;
   text-transform:uppercase;
   font-weight:700;
@@ -209,14 +212,14 @@ td.vazio{color:var(--cinza);font-style:italic}
   background:var(--pendente-fundo);
   border-radius:0 6px 6px 0;
   padding:12px 15px;
-  font-size:12.5px;
+  font-size:0.9rem;
   color:var(--cinza);
   margin-top:13px;
 }
 .pendencia b{color:var(--tinta)}
 .pendencia code{
   font-family:Consolas,monospace;
-  font-size:11.5px;
+  font-size:0.825rem;
   background:var(--branco);
   padding:1px 5px;
   border-radius:3px;
@@ -226,17 +229,17 @@ td.vazio{color:var(--cinza);font-style:italic}
 /* ---------- gráfico ---------- */
 .grafico{background:var(--branco);border:1px solid var(--linha);border-radius:6px;padding:10px}
 .grafico svg{display:block;width:100%;height:auto}
-.legenda{display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--cinza)}
+.legenda{display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;font-size:0.85rem;color:var(--cinza)}
 .legenda span{display:flex;align-items:center;gap:7px}
 .chave{width:18px;height:0;flex:none}
 
-.nota{font-size:12px;color:var(--cinza);margin:11px 0 0;font-style:italic}
+.nota{font-size:0.85rem;color:var(--cinza);margin:11px 0 0;font-style:italic}
 
 footer{
   max-width:1120px;
   margin:0 auto;
   padding:0 26px 30px;
-  font-size:11.5px;
+  font-size:0.825rem;
   color:var(--cinza);
 }
 
@@ -247,7 +250,7 @@ footer{
   background:#eef6f7;
   border-radius:0 6px 6px 0;
   padding:11px 15px;
-  font-size:13px;
+  font-size:0.925rem;
   margin-bottom:16px;
 }
 .aviso.ok{border-left-color:var(--ok);background:var(--ok-fundo);color:var(--ok)}
@@ -255,8 +258,8 @@ footer{
 
 /* ---------- treinamento ---------- */
 .grupo{border:1px dashed var(--linha);border-radius:6px;padding:10px 12px;margin:0 0 12px}
-.grupo .titulo{font-size:12px;color:var(--cinza);margin:0 0 8px;font-weight:600}
-.andamento{display:flex;align-items:center;gap:12px;font-size:13px}
+.grupo .titulo{font-size:0.85rem;color:var(--cinza);margin:0 0 8px;font-weight:600}
+.andamento{display:flex;align-items:center;gap:12px;font-size:0.925rem}
 .giro{width:16px;height:16px;border:2px solid var(--teal-claro);border-top-color:var(--teal);
   border-radius:50%;animation:giro 1s linear infinite;flex:none}
 @keyframes giro{to{transform:rotate(360deg)}}
@@ -264,26 +267,26 @@ footer{
 .barra{display:block;width:100%;height:10px;margin:10px 0 4px;accent-color:var(--teal)}
 
 /* ---------- tabelas com ações ---------- */
-.btn.mini{padding:3px 10px;font-size:11.5px;text-decoration:none;display:inline-block}
+.btn.mini{padding:3px 10px;font-size:0.825rem;text-decoration:none;display:inline-block}
 a.btn{text-decoration:none;display:inline-block}
-dl.ficha{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0;font-size:13px}
+dl.ficha{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0;font-size:0.925rem}
 dl.ficha dt{color:var(--cinza)}
-dl.ficha dd{margin:0;font-family:Consolas,"Courier New",monospace;font-size:12.5px;word-break:break-all}
+dl.ficha dd{margin:0;font-family:Consolas,"Courier New",monospace;font-size:0.9rem;word-break:break-all}
 
 /* ---------- ajuda (?) com detalhes técnicos ---------- */
 details.ajuda{display:inline-block;margin-left:8px;text-transform:none;letter-spacing:normal}
 details.ajuda summary{list-style:none;cursor:pointer;width:18px;height:18px;border-radius:4px;
-  background:var(--cinza);color:var(--branco);font-size:12px;font-weight:700;
+  background:var(--cinza);color:var(--branco);font-size:0.85rem;font-weight:700;
   display:flex;align-items:center;justify-content:center}
 details.ajuda summary::-webkit-details-marker{display:none}
 details.ajuda[open] summary{outline:2px solid var(--escuro);outline-offset:1px}
 .painel:has(details.ajuda){position:relative}
 .ajuda-caixa{position:absolute;top:44px;left:19px;z-index:10;width:360px;max-width:calc(100% - 38px);
   background:var(--branco);border:1px solid var(--linha);border-radius:6px;
-  box-shadow:0 4px 14px rgba(11,60,73,.15);font-size:13px;font-weight:400;color:var(--tinta)}
+  box-shadow:0 4px 14px rgba(11,60,73,.15);font-size:0.925rem;font-weight:400;color:var(--tinta)}
 .ajuda-topo{display:flex;justify-content:space-between;align-items:center;font-weight:600;
   padding:9px 12px;border-bottom:1px solid var(--linha-fraca)}
-.ajuda-fechar{border:0;background:none;font-size:20px;line-height:1;color:var(--cinza);cursor:pointer;padding:0 2px}
+.ajuda-fechar{border:0;background:none;font-size:1.425rem;line-height:1;color:var(--cinza);cursor:pointer;padding:0 2px}
 .ajuda-caixa p{margin:0;padding:8px 12px 0;overflow-wrap:anywhere}
 .ajuda-caixa p:last-child{padding-bottom:10px}
 .ajuda-caixa ul{margin:6px 0 0;padding:0 12px 0 30px}
@@ -291,7 +294,7 @@ details.ajuda[open] summary{outline:2px solid var(--escuro);outline-offset:1px}
 
 /* ---------- abas Gráfico | Tabela da série consolidada ---------- */
 .abas > input{position:absolute;opacity:0;pointer-events:none}
-.abas > label{display:inline-block;padding:7px 16px;margin:0 2px -1px 0;font-size:13px;color:var(--cinza);
+.abas > label{display:inline-block;padding:7px 16px;margin:0 2px -1px 0;font-size:0.925rem;color:var(--cinza);
   border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;cursor:pointer}
 .abas > input:checked + label{color:var(--escuro);font-weight:600;background:var(--branco);border-color:var(--linha)}
 .abas > input:focus-visible + label{outline:2px solid var(--teal);outline-offset:-2px}
@@ -311,8 +314,8 @@ tr.linha-lacuna td{font-style:italic}
 .serie-grafico circle.alvo.ativo{fill:var(--escuro);stroke:#fff;stroke-width:1.5;r:5px}
 .dica-serie{display:none;position:absolute;z-index:5;pointer-events:none;min-width:230px;
   background:var(--branco);border:1px solid var(--linha);border-radius:8px;padding:9px 12px;
-  box-shadow:0 4px 14px rgba(11,60,73,.15);font-size:12.5px;line-height:1.6;color:var(--tinta)}
-.dica-titulo{font-weight:600;font-size:13.5px;margin-bottom:2px}
+  box-shadow:0 4px 14px rgba(11,60,73,.15);font-size:0.9rem;line-height:1.6;color:var(--tinta)}
+.dica-titulo{font-weight:600;font-size:0.975rem;margin-bottom:2px}
 .dica-linha{display:flex;justify-content:space-between;gap:16px}
 .dica-linha span{color:var(--cinza)}
 .dica-linha b{font-weight:600}
@@ -322,31 +325,31 @@ tr.linha-lacuna td{font-style:italic}
 
 /* seletor de ano do gráfico da série */
 .seletor-ano{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
-.seletor-ano b{font-size:13px;color:var(--escuro)}
-.controles-ano{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--cinza)}
+.seletor-ano b{font-size:0.925rem;color:var(--escuro)}
+.controles-ano{display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--cinza)}
 .controles-ano .btn.mini{background:var(--branco);color:var(--escuro);border:1px solid var(--linha)}
 .controles-ano .btn.mini:disabled{opacity:.4;cursor:default}
 .controles-ano .btn.mini.ativo{background:var(--escuro);color:var(--branco);border-color:var(--escuro)}
 .passo-ano{display:flex;flex-direction:column;border:1px solid var(--linha);border-radius:6px;overflow:hidden}
 .passo-ano button{width:26px;height:15px;padding:0;border:0;background:var(--branco);color:var(--escuro);
-  font-size:8px;line-height:1;cursor:pointer}
+  font-size:0.6rem;line-height:1;cursor:pointer}
 .passo-ano button + button{border-top:1px solid var(--linha)}
 .passo-ano button:hover:not(:disabled){background:var(--claro)}
 .passo-ano button:disabled{color:var(--linha);cursor:default}
 .combo-ano{position:relative}
-.combo-ano input{width:150px;padding:5px 28px 5px 9px;font-family:Consolas,monospace;font-size:12.5px}
-.combo-seta{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--cinza);pointer-events:none}
+.combo-ano input{width:12rem;padding:5px 28px 5px 9px;font-family:Consolas,monospace;font-size:0.9rem}
+.combo-seta{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:0.8rem;color:var(--cinza);pointer-events:none}
 .lista-anos{display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:20;width:290px;max-height:260px;
   overflow-y:auto;background:var(--branco);border:1px solid var(--linha);border-radius:8px;padding:4px;
   box-shadow:0 6px 18px rgba(11,60,73,.15)}
 .lista-anos.aberta{display:block}
 .item-ano{padding:6px 10px;border-radius:5px;cursor:pointer;line-height:1.35}
 .item-ano[hidden]{display:none}
-.item-ano b{display:block;font-size:13px;color:var(--tinta)}
-.item-ano small{font-size:11.5px;color:var(--cinza)}
+.item-ano b{display:block;font-size:0.925rem;color:var(--tinta)}
+.item-ano small{font-size:0.825rem;color:var(--cinza)}
 .item-ano.foco{background:var(--claro)}
 .item-ano.selecionado{box-shadow:inset 3px 0 0 var(--escuro)}
 .item-ano.selecionado b{color:var(--escuro)}
-.lista-vazia{padding:8px 10px;font-size:12px;color:var(--cinza)}
-.erro-ano{color:#a83a2c;font-size:12px;margin:0;min-height:16px}
+.lista-vazia{padding:8px 10px;font-size:0.85rem;color:var(--cinza)}
+.erro-ano{color:#a83a2c;font-size:0.85rem;margin:0;min-height:16px}
 .serie-grafico:not(.ampliado) circle.alvo{cursor:zoom-in}

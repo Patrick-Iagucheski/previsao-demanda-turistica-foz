@@ -1,0 +1,13 @@
+Script: testes/teste_integridade_sintetica.py
+Executado em: 20/11/2026 12:51 (Windows 11, Python 3.12.2)
+Código do sistema testado: commit b022c47 do repositório (b022c474b188a2bbdd3739654e498c974a223993), sem alterações locais nos módulos do sistema
+Banco: cópia temporária de dados/experimentos.db (o original não é alterado)
+Duração: 0 s | código de saída: 0
+------------------------------------------------------------------------------
+  [ok] íntegra                   íntegra=True
+  [ok] mês duplicado             íntegra=False | duplicidades=['2024-05']
+  [ok] valor negativo            íntegra=False | valores_invalidos=['2024-04']
+  [ok] valor ausente (NaN)       íntegra=False | valores_invalidos=['2024-04']
+  [ok] lacuna fora da pandemia   íntegra=False | lacunas_fora_da_pandemia=['2024-06']
+  [ok] lacuna na pandemia        íntegra=True
+RESULTADO: tudo certo

@@ -19,6 +19,7 @@ aplicacao/        serviços: ingestão, pré-processamento, treinamento, previs�
 infraestrutura/   adaptadores: CSV da ANAC, modelos (naïve, Random Forest, LSTM), banco SQLite
 apresentacao/     aplicação Flask: rotas, telas e estilo
 notebooks/        caracterização da série, experimento e referência de persistência
+testes/           testes do sistema (Seção 5.7 do TCC) e suas saídas em testes/resultados
 dados/            experimentos.db: a série mensal e as 11 execuções do TCC
 config.py         caminhos e parâmetros (semente padrão 42, pasta dos CSV da ANAC)
 bases.json        bases que podem ser escolhidas na interface
@@ -66,7 +67,7 @@ jupyter notebook notebooks
 
 | Notebook | O que faz |
 |---|---|
-| `01_caracterizacao_serie` | Estatísticas da série, índice sazonal de janeiro, julho e dezembro, decomposição, autocorrelação e testes ADF e KPSS |
+| `01_caracterizacao_serie` | Estatísticas da série, índice sazonal de janeiro, julho e dezembro (anos civis de 2024 e 2025 e, para comparação, o ciclo pré-pandêmico de março de 2019 a fevereiro de 2020), decomposição, autocorrelação e testes ADF e KPSS |
 | `02_experimento_resultados` | Executa o experimento: naïve sazonal, Random Forest e LSTM em cinco sementes, métricas, Diebold-Mariano e importância dos atributos. **Ao ser executado, treina de novo e grava mais 11 execuções na base** (cerca de 40 minutos) |
 | `03_baseline_persistencia` | Calcula a persistência e o teste de Diebold-Mariano contra as 11 execuções gravadas. Abre a base só para leitura |
 
@@ -80,6 +81,30 @@ Os notebooks gravam os resultados em `docs/resultados`, pasta criada na primeira
   `tb_exp_metricas`).
 - Os modelos treinados não estão no repositório. Podem ser gerados de novo pela tela Treinar
   ou pelo notebook 02.
+
+## Testes
+
+Os testes do sistema descritos na Seção 5.7 do TCC ficam na pasta `testes`, e a saída da
+execução usada no TCC, com a data e o commit do código testado, em `testes/resultados`. Os
+testes que usam a base trabalham sobre uma cópia temporária, sem alterar
+`dados/experimentos.db`.
+
+```
+python aplicacao\avaliacao.py
+python testes\teste_integridade_sintetica.py
+python testes\teste_modelos_salvos.py
+python testes\teste_telas.py
+```
+
+| Teste | O que verifica | Precisa, além da base incluída |
+|---|---|---|
+| `aplicacao\avaliacao.py` | autotestes das métricas (MAE, RMSE e MAPE) e do teste de Diebold-Mariano | nada |
+| `teste_integridade_sintetica` | a rotina de integridade (RF04) com séries sintéticas: mês repetido, valor negativo, valor ausente e lacunas | nada |
+| `teste_modelos_salvos` | os modelos salvos das 11 execuções reproduzem as 132 previsões gravadas (RF15 e RF19) | os modelos em `dados/modelos` |
+| `teste_telas` | percorre a aplicação web pelo cliente de testes do Flask, sem navegador (cerca de 3 minutos): telas, comparação, exportação, treino, importação, gráfico da série e seletor de base | os modelos em `dados/modelos` (parte 4), os CSV da ANAC (parte 8) e a base simulada (parte 9) |
+
+Os modelos treinados e a base simulada não estão no repositório (veja Reprodutibilidade): sem
+eles, as partes que dependem deles acusam falha.
 
 ## De onde vêm os números do TCC
 
