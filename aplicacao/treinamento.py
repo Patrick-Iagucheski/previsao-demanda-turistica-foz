@@ -1,31 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Serviço de treinamento (camada de aplicação) — RF10 a RF16 e RF19.
-
-Executa um experimento completo para um modelo, na ordem do Diagrama de
-Sequência "Treinar e avaliar" (docs/diagramas/13_sequencia_treinar.puml):
-
-    PreProcessamentoService.preparar(serie)
-    PreProcessamentoService.dividir(serie preparada) -> (treino, teste)
-    IForecaster.fit(treino)
-    IForecaster.salvar(caminho_modelo)
-    IForecaster.predict(teste)
-    AvaliacaoService.avaliar(previsoes)   # métricas nos escopos global e alta temporada
-    IExecucaoRepository.salvar_execucao(execucao)
-    IExecucaoRepository.salvar_previsoes(id, previsoes)
-
-O teste de Diebold-Mariano não faz parte deste fluxo: ele compara execuções já
-registradas (tela de comparação e notebook de resultados).
-
-O serviço não conhece os modelos concretos: recebe uma fábrica que associa
-cada TipoModeloEnum a um construtor de IForecaster. Quem monta essa fábrica
-é o ponto de composição (a aplicação Flask ou o notebook de resultados). É
-o que mantém a camada de aplicação livre de dependências da infraestrutura
-(Ports & Adapters, Seção 4.6.2 do TCC).
-
-Todos os modelos recebem o mesmo pré-processamento e são avaliados sobre o
-mesmo horizonte de teste, condição da comparação justa (RN07).
-"""
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -39,11 +11,42 @@ from aplicacao.preprocessamento import PreProcessamentoService
 from dominio.entidades import Execucao, Previsao, SerieTemporal, TipoModeloEnum
 from dominio.portas import IExecucaoRepository, IForecaster
 
+# Serviço de treinamento (camada de aplicação): RF10 a RF16 e RF19.
+#
+# Executa um experimento completo para um modelo, na ordem do Diagrama de
+# Sequência "Treinar e avaliar" (docs/diagramas/13_sequencia_treinar.puml):
+#
+#     PreProcessamentoService.preparar(serie)
+#     PreProcessamentoService.dividir(serie preparada) -> (treino, teste)
+#     IForecaster.fit(treino)
+#     IForecaster.salvar(caminho_modelo)
+#     IForecaster.predict(teste)
+#     AvaliacaoService.avaliar(previsoes)   # métricas nos escopos global e alta temporada
+#     IExecucaoRepository.salvar_execucao(execucao)
+#     IExecucaoRepository.salvar_previsoes(id, previsoes)
+#
+# O teste de Diebold-Mariano não faz parte deste fluxo: ele compara execuções já
+# registradas (tela de comparação e notebook de resultados).
+#
+# O serviço não conhece os modelos concretos: recebe uma fábrica que associa
+# cada TipoModeloEnum a um construtor de IForecaster. Quem monta essa fábrica
+# é o ponto de composição (a aplicação Flask ou o notebook de resultados). É
+# o que mantém a camada de aplicação livre de dependências da infraestrutura
+# (Ports & Adapters, Seção 4.6.2 do TCC).
+#
+# Todos os modelos recebem o mesmo pré-processamento e são avaliados sobre o
+# mesmo horizonte de teste, condição da comparação justa (RN07).
+
+# Tipo da fábrica de modelos: um dicionário que liga cada TipoModeloEnum à
+# classe que cria o modelo (montado em apresentacao/app.py).
 FabricaModelos = Dict[TipoModeloEnum, Callable[..., IForecaster]]
 
-
+# Executa o experimento completo de um modelo: prepara, treina, salva, prevê,
+# avalia e registra (RF10 a RF16, RF19).
 class TreinamentoService:
 
+    # Recebe de fora a fábrica de modelos e o repositório; pré-processamento,
+    # avaliação e pasta dos modelos usam o padrão quando não informados.
     def __init__(
         self,
         fabrica: FabricaModelos,
@@ -58,6 +61,15 @@ class TreinamentoService:
         self.avaliacao = avaliacao or AvaliacaoService()
         self.pasta_modelos = Path(pasta_modelos or config.MODELOS)
 
+    # Treina, prevê, avalia e (opcionalmente) registra uma execução.
+    #
+    # `persistir=False` executa sem gravar no banco; útil para conferências
+    # que não devem entrar no histórico do experimento.
+    #
+    # Como funciona: cria o modelo pela fábrica, prepara e divide a série, treina
+    # com fit(), salva o arquivo do modelo (nome com o tipo e a data e hora),
+    # prevê os meses de teste com predict(), calcula as métricas e grava a
+    # execução e as previsões no banco.
     def executar(
         self,
         serie: SerieTemporal,
@@ -66,11 +78,6 @@ class TreinamentoService:
         hiperparametros: Optional[dict] = None,
         persistir: bool = True,
     ) -> Execucao:
-        """Treina, prevê, avalia e (opcionalmente) registra uma execução.
-
-        `persistir=False` executa sem gravar no banco — útil para conferências
-        que não devem entrar no histórico do experimento.
-        """
         tipo = TipoModeloEnum(modelo)
         forecaster = self.fabrica[tipo](semente=seed, **(hiperparametros or {}))
 

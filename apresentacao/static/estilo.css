@@ -113,6 +113,7 @@ input[type=text],input[type=number],select{
   background:var(--branco);
 }
 input.largo{flex:1;min-width:240px}
+input[type=number],select.num{text-align:right;text-align-last:right}
 input:disabled,select:disabled{background:var(--pendente-fundo);color:var(--cinza)}
 
 .btn{
@@ -188,6 +189,7 @@ thead th{
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:var(--claro)}
 td.num{font-family:Consolas,monospace;text-align:right;font-variant-numeric:tabular-nums}
+th.num{text-align:right}
 td.vazio{color:var(--cinza);font-style:italic}
 
 /* ---------- selos ---------- */

@@ -73,7 +73,7 @@
   <h2>Métricas por execução e escopo</h2>
   <div class="rolagem">
     <table>
-      <thead><tr><th>Execução</th><th>Modelo</th><th>Semente</th><th>MAE global</th><th>RMSE global</th><th>MAPE global</th><th>MAPE alta temporada</th></tr></thead>
+      <thead><tr><th class="num">Execução</th><th>Modelo</th><th class="num">Semente</th><th class="num">MAE global</th><th class="num">RMSE global</th><th class="num">MAPE global</th><th class="num">MAPE alta temporada</th></tr></thead>
       <tbody>
       {% for l in linhas %}
         <tr><td class="num"><a href="{{ url_for('execucao', id_execucao=l.id) }}">{{ l.id }}</a></td><td>{{ l.modelo }}</td><td class="num">{{ l.semente }}</td>
@@ -97,7 +97,7 @@
   {% if testes %}
   <div class="rolagem" style="margin-top:14px">
     <table>
-      <thead><tr><th>Par comparado (escopo global, perda quadrática)</th><th>DM</th><th>Valor-p</th><th>Conclusão</th></tr></thead>
+      <thead><tr><th>Par comparado (escopo global, perda quadrática)</th><th class="num">DM</th><th class="num">Valor-p</th><th>Conclusão</th></tr></thead>
       <tbody>
       {% for t in testes %}
         <tr><td>nº {{ t.a.id }} {{ t.a.modelo }} &times; nº {{ t.b.id }} {{ t.b.modelo }}</td>

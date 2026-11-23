@@ -56,7 +56,7 @@
   <h2 style="margin-top:20px">Blocos temporais</h2>
   <div class="rolagem">
     <table>
-      <thead><tr><th>Bloco</th><th>Início</th><th>Fim</th><th>Meses</th><th>Descrição</th></tr></thead>
+      <thead><tr><th class="num">Bloco</th><th>Início</th><th>Fim</th><th class="num">Meses</th><th>Descrição</th></tr></thead>
       <tbody>
       {% for f in resumo.faixas %}
         <tr>
@@ -136,7 +136,7 @@
     <div class="aba-conteudo" id="conteudo-tabela" role="tabpanel">
       <div class="rolagem" style="max-height:330px;overflow-y:auto">
         <table>
-          <thead><tr><th>Competência</th><th>Desembarques</th><th>Alta temporada</th><th>Pandemia</th><th>Bloco</th></tr></thead>
+          <thead><tr><th>Competência</th><th class="num">Desembarques</th><th>Alta temporada</th><th>Pandemia</th><th class="num">Bloco</th></tr></thead>
           <tbody>
           {% set ns = namespace(anterior='') %}
           {% for r in registros %}

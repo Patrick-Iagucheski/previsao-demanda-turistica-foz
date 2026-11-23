@@ -1,23 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Random Forest — adaptador de IForecaster (RF12), com ajuste de
-hiperparâmetros por validação temporal (RF14).
-
-Treina sobre a matriz de atributos gerada no pré-processamento (defasagens
-1 a 3, mês em codificação cíclica e indicador de alta temporada).
-
-Ajuste de hiperparâmetros (Seção 3.7 do TCC): busca em grade sobre o número
-de árvores, a profundidade máxima e o número de atributos considerados em
-cada divisão, avaliada por validação cruzada temporal (TimeSeriesSplit, em
-janela expansível). Em cada partição o modelo é treinado num trecho inicial e
-validado no trecho imediatamente posterior. Como a busca ocorre dentro de
-fit(), ela só enxerga o treino: o conjunto de teste não participa da escolha
-dos parâmetros (RN04). A melhor configuração é então reajustada sobre o
-treino inteiro.
-
-O Random Forest não exige normalização das entradas: as divisões das árvores
-dependem apenas da ordem dos valores, não da escala.
-"""
 import sys
 from pathlib import Path
 from typing import List
@@ -27,7 +7,26 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from dominio.entidades import SerieTemporal, TipoModeloEnum
 from dominio.portas import IForecaster
 
+# Random Forest: adaptador de IForecaster (RF12), com ajuste de
+# hiperparâmetros por validação temporal (RF14).
+#
+# Treina sobre a matriz de atributos gerada no pré-processamento (defasagens
+# 1 a 3, mês em codificação cíclica e indicador de alta temporada).
+#
+# Ajuste de hiperparâmetros (Seção 3.7 do TCC): busca em grade sobre o número
+# de árvores, a profundidade máxima e o número de atributos considerados em
+# cada divisão, avaliada por validação cruzada temporal (TimeSeriesSplit, em
+# janela expansível). Em cada partição o modelo é treinado num trecho inicial e
+# validado no trecho imediatamente posterior. Como a busca ocorre dentro de
+# fit(), ela só enxerga o treino: o conjunto de teste não participa da escolha
+# dos parâmetros (RN04). A melhor configuração é então reajustada sobre o
+# treino inteiro.
+#
+# O Random Forest não exige normalização das entradas: as divisões das árvores
+# dependem apenas da ordem dos valores, não da escala.
+
 # Espaço de busca (Seção 3.7 do TCC; docs/planejamento_sistema.md, Seção 4.4).
+# São 2 x 4 x 2 = 16 combinações, testadas em fit().
 GRADE_PADRAO = {
     "n_estimators": [200, 500],
     "max_depth": [2, 3, 5, None],
@@ -38,11 +37,14 @@ GRADE_PADRAO = {
 # deixam 5 meses para validar em cada uma e 5 meses no menor treino.
 N_PARTICOES = 4
 
-
+# Modelo Random Forest (floresta de árvores de decisão) que segue a interface
+# IForecaster (RF12, RF14).
 class RandomForestModel(IForecaster):
 
     extensao = ".joblib"
 
+    # Guarda a semente, a grade de busca e o número de partições; o modelo e os
+    # hiperparâmetros escolhidos só são preenchidos em fit() ou carregar().
     def __init__(self, semente: int = 42, grade: dict = None,
                  n_particoes: int = N_PARTICOES):
         self.semente = semente
@@ -54,13 +56,18 @@ class RandomForestModel(IForecaster):
         self._colunas: List[str] = []
         self._busca = {}
 
+    # Retorna o identificador do modelo ("random_forest").
     def nome(self) -> str:
         return TipoModeloEnum.RANDOM_FOREST.value
 
+    # Retorna quantas defasagens (lag_1, lag_2, lag_3) entram como atributos, gravado
+    # na execução.
     @property
     def tamanho_janela_entrada(self):
         return sum(1 for c in self._colunas if c.startswith("lag_")) or None
 
+    # Retorna os hiperparâmetros escolhidos na busca e o resultado da validação,
+    # gravados com a execução (RF19).
     def hiperparametros(self) -> dict:
         return {
             "n_estimators": self.n_estimators,
@@ -72,7 +79,8 @@ class RandomForestModel(IForecaster):
             **self._busca,
         }
 
-    # ------------------------------------------------------------------
+    # Monta X (atributos de cada mês) e y (desembarques do mês), guardando a ordem
+    # das colunas para usar a mesma ordem na previsão.
     def _matriz(self, serie: SerieTemporal):
         linhas = serie.com_atributos()
         if not self._colunas:
@@ -81,6 +89,10 @@ class RandomForestModel(IForecaster):
         y = [r.desembarques for r in linhas]
         return X, y
 
+    # Treina o Random Forest escolhendo os hiperparâmetros por validação temporal (RF14).
+    # Como funciona: monta a matriz do treino; o GridSearchCV testa as 16 combinações
+    # da grade nas 4 partições do TimeSeriesSplit, mede o MAE de cada uma e retreina a
+    # melhor no treino inteiro (refit).
     def fit(self, treino: SerieTemporal) -> None:
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
@@ -104,15 +116,20 @@ class RandomForestModel(IForecaster):
             "configuracoes_testadas": len(busca.cv_results_["params"]),
         }
 
+    # Retorna a previsão de cada mês do horizonte: monta os atributos na mesma ordem
+    # de colunas do treino e chama o predict() da floresta, que tira a média das árvores.
     def predict(self, horizonte: SerieTemporal) -> List[float]:
         X = [[r.atributos[c] for c in self._colunas] for r in horizonte.registros]
         return [float(v) for v in self._modelo.predict(X)]
 
+    # Importância média de cada atributo na floresta (impureza): retorna
+    # {atributo: importância}, e a soma das importâncias dá 1.
     def importancia_atributos(self) -> dict:
-        """Importância média de cada atributo na floresta (impureza)."""
         return dict(zip(self._colunas,
                         (float(v) for v in self._modelo.feature_importances_)))
 
+    # Salva com o joblib a floresta treinada, a ordem das colunas e o resultado da
+    # busca, para prever depois sem treinar de novo (RF19).
     def salvar(self, caminho_modelo) -> None:
         import joblib
         caminho = Path(caminho_modelo)
@@ -120,6 +137,8 @@ class RandomForestModel(IForecaster):
         joblib.dump({"modelo": self._modelo, "colunas": self._colunas,
                      "busca": self._busca}, caminho)
 
+    # Recarrega o arquivo gravado por salvar() e restaura o modelo, as colunas e os
+    # hiperparâmetros.
     def carregar(self, caminho_modelo) -> None:
         import joblib
         conteudo = joblib.load(caminho_modelo)

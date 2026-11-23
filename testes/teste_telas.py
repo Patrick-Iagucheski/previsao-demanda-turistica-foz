@@ -1,11 +1,13 @@
-# -*- coding: utf-8 -*-
-"""Teste ponta a ponta das telas, sobre uma CÓPIA do banco (o real não é tocado).
-Resultado na Seção 5.7 do TCC. Exige, além da base incluída no repositório, os CSV
-da ANAC (dados/brutos ou a pasta da variável ANAC_ORIGEM, parte 8), os modelos
-salvos das 11 execuções (dados/modelos, parte 4) e a base simulada (parte 9)."""
 import os, re, shutil, sys, tempfile, time
 from pathlib import Path
 
+# Teste ponta a ponta das telas, sobre uma CÓPIA do banco (o real não é tocado).
+# Resultado na Seção 5.7 do TCC. Exige, além da base incluída no repositório, os CSV
+# da ANAC (dados/brutos ou a pasta da variável ANAC_ORIGEM, parte 8), os modelos
+# salvos das 11 execuções (dados/modelos, parte 4) e a base simulada (parte 9).
+
+# Pasta raiz do projeto e pasta temporária com a cópia do banco e dos modelos
+# treinados durante o teste.
 RAIZ = Path(__file__).resolve().parents[1]
 TMP = Path(tempfile.mkdtemp(prefix="tcc_telas_"))
 shutil.copy(RAIZ / "dados" / "experimentos.db", TMP / "banco.db")
@@ -18,8 +20,12 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import config  # noqa: E402
 import app as modulo  # noqa: E402
+# Pasta dos CSV da ANAC, usada nos testes de importação.
 ANAC = Path(config.ANAC_ORIGEM)
+# Cliente de teste do Flask: acessa as rotas sem abrir o navegador.
 c = modulo.app.test_client()
+# ok() imprime [ok] ou [FALHOU] com a mensagem e retorna a condição; texto()
+# retorna o HTML da resposta.
 ok = lambda cond, msg: print(("  [ok] " if cond else "  [FALHOU] ") + msg) or cond
 texto = lambda r: r.get_data(as_text=True)
 falhas = 0
@@ -65,6 +71,8 @@ falhas += not ok("Configuração inválida" in texto(r), "valor fora das opçõe
 r = c.post("/treinar", data={"modelo": "xgboost"}, follow_redirects=True)
 falhas += not ok("Configuração inválida" in texto(r), "modelo desconhecido é rejeitado")
 
+# Envia o formulário de treino pela tela, espera o treino em segundo plano terminar
+# e confere se a execução apareceu na tela de treinamento.
 def treinar(dados, rotulo, limite=900):
     t0 = time.time()
     c.post("/treinar", data=dados)
@@ -97,7 +105,8 @@ print("8. Importação")
 r = c.post("/importar", data={"pasta": r"C:\nao\existe"}, follow_redirects=True)
 falhas += not ok("Pasta não encontrada" in texto(r), "pasta inexistente é recusada")
 
-
+# Envia o formulário de importação com a pasta informada, espera terminar e
+# retorna o HTML da tela de importação.
 def importar_e_esperar(pasta):
     c.post("/importar", data={"pasta": str(pasta)})
     while modulo._IMPORTACAO["atual"]["estado"] == "executando":

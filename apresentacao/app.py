@@ -1,39 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Interface web do sistema de previsão de demanda turística.
-
-As quatro telas estão ligadas à camada de aplicação. Este módulo é também o
-**ponto de composição** do sistema: é aqui, e só aqui, que os serviços da
-camada de aplicação recebem os adaptadores concretos da infraestrutura
-(carregador da ANAC, repositório SQLite e os três modelos). Os serviços
-conhecem apenas as portas do domínio (Ports & Adapters, Seção 4.6.2 do TCC).
-
-Rotas (mapa completo em docs/telas.md):
-    GET  /                       Importação (UC01) — série gravada no banco e progresso
-    GET  /importacao/andamento   progresso da importação e gráfico parcial (JSON)
-    GET  /importacao/grafico     gráfico da série: todos os anos ou um ano (?ano=AAAA)
-    POST /importar               IngestaoService.importar(pasta), em segundo plano + validar(serie) (RF04)
-    GET  /treinamento            Treinamento (UC04) — formulário e andamento
-    POST /treinar                TreinamentoService.executar, em segundo plano
-    GET  /comparacao             comparar() — Comparação (UC06, UC07, UC09) — ?ids=1&ids=2
-    GET  /historico              Histórico (UC08) — execuções do banco
-    GET  /execucao/<id>          Detalhes de uma execução
-    POST /execucao/<id>/prever   PrevisaoService.prever — modelo salvo, sem retreinar
-    POST /exportar               ExportacaoCsvService — download do CSV
-
-O treinamento roda numa thread separada porque a LSTM leva minutos; a tela
-de treinamento se atualiza sozinha até a execução terminar. Um treinamento
-por vez.
-
-Variáveis de ambiente opcionais (usadas nos testes, para não tocar no banco
-real): TCC_BANCO (caminho do banco), TCC_MODELOS (pasta dos modelos) e
-TCC_PORTA (porta do servidor; padrão 5000).
-
-Execução:
-    .venv\\Scripts\\activate
-    python apresentacao/app.py
-    http://localhost:5000
-"""
 import os
 import secrets
 import sys
@@ -65,13 +29,50 @@ from infraestrutura.modelos.naive import NaiveSazonal
 from infraestrutura.modelos.random_forest import RandomForestModel
 from infraestrutura.repositorios.sqlite_repo import SqliteRepository
 
+# Interface web do sistema de previsão de demanda turística.
+#
+# As quatro telas estão ligadas à camada de aplicação. Este módulo é também o
+# **ponto de composição** do sistema: é aqui, e só aqui, que os serviços da
+# camada de aplicação recebem os adaptadores concretos da infraestrutura
+# (carregador da ANAC, repositório SQLite e os três modelos). Os serviços
+# conhecem apenas as portas do domínio (Ports & Adapters, Seção 4.6.2 do TCC).
+#
+# Rotas (mapa completo em docs/telas.md):
+#     GET  /                       Importação (UC01): série gravada no banco e progresso
+#     GET  /importacao/andamento   progresso da importação e gráfico parcial (JSON)
+#     GET  /importacao/grafico     gráfico da série: todos os anos ou um ano (?ano=AAAA)
+#     POST /importar               IngestaoService.importar(pasta), em segundo plano + validar(serie) (RF04)
+#     GET  /treinamento            Treinamento (UC04): formulário e andamento
+#     POST /treinar                TreinamentoService.executar, em segundo plano
+#     GET  /comparacao             comparar(), Comparação (UC06, UC07, UC09): ?ids=1&ids=2
+#     GET  /historico              Histórico (UC08): execuções do banco
+#     GET  /execucao/<id>          Detalhes de uma execução
+#     POST /execucao/<id>/prever   PrevisaoService.prever: modelo salvo, sem retreinar
+#     POST /exportar               ExportacaoCsvService: download do CSV
+#
+# O treinamento roda numa thread separada porque a LSTM leva minutos; a tela
+# de treinamento se atualiza sozinha até a execução terminar. Um treinamento
+# por vez.
+#
+# Variáveis de ambiente opcionais (usadas nos testes, para não tocar no banco
+# real): TCC_BANCO (caminho do banco), TCC_MODELOS (pasta dos modelos) e
+# TCC_PORTA (porta do servidor; padrão 5000).
+#
+# Execução:
+#     .venv\Scripts\activate
+#     python apresentacao/app.py
+#     http://localhost:5000
+
+# Cria a aplicação web (Flask).
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)   # só para as mensagens de aviso (flash)
 
-# ----------------------------------------------------------------------
 # Ponto de composição
-# ----------------------------------------------------------------------
+
+# Fábrica de modelos: liga cada tipo à classe que cria o modelo; é passada ao
+# TreinamentoService e ao PrevisaoService.
 _FABRICA = {T.NAIVE: NaiveSazonal, T.RANDOM_FOREST: RandomForestModel, T.LSTM: LSTMModel}
+# Serviços que não dependem da base escolhida (criados uma vez só).
 _avaliacao = AvaliacaoService()
 _visualizacao = VisualizacaoService()
 _exportacao = ExportacaoCsvService()
@@ -82,14 +83,16 @@ _CACHE = {"serie": None}
 # Bases selecionáveis no cabeçalho (bases.json): a real e as de experimentos
 # complementares. Cada uma é um arquivo SQLite próprio.
 _BASES = {b["id"]: b for b in config.ler_bases()["bases"]}
-_ATIVA = {"base": None}
+_ATIVA = {"base": None}  # base em uso no momento (trocada em trocar_base())
 
-
+# Cria o repositório da base escolhida e o injeta nos serviços (Martin,
+# 2019, cap. 26; Percival; Gregory, 2020). Domínio, serviços e modelos não
+# mudam: dependem só das interfaces. TCC_BANCO, quando definido (testes),
+# tem prioridade sobre o arquivo da base.
+# Como funciona: cria o SqliteRepository da base (e as tabelas, se faltarem),
+# escolhe a pasta dos modelos e recria os serviços de ingestão, treinamento e
+# previsão com esse repositório.
 def _montar_servicos(id_base):
-    """Cria o repositório da base escolhida e o injeta nos serviços (Martin,
-    2019, cap. 26; Percival; Gregory, 2020). Domínio, serviços e modelos não
-    mudam: dependem só das interfaces. TCC_BANCO, quando definido (testes),
-    tem prioridade sobre o arquivo da base."""
     global _REPO, _ingestao, _treinamento, _previsao
     base = _BASES[id_base]
     _REPO = SqliteRepository(os.environ.get("TCC_BANCO") or (config.RAIZ / base["arquivo"]))
@@ -103,17 +106,17 @@ def _montar_servicos(id_base):
     _CACHE["serie"] = None
     _ATIVA["base"] = base
 
-
+# Ao iniciar, monta os serviços com a base padrão de bases.json.
 _montar_servicos(config.ler_bases()["padrao"])
 
-
+# Envia a todas as telas a lista de bases e a base ativa (seletor do cabeçalho).
 @app.context_processor
 def _base_ativa():
     return {"bases": list(_BASES.values()), "base_ativa": _ATIVA["base"]}
 
 # Treinamento em segundo plano: no máximo um por vez.
 _TAREFA = {"atual": None}
-_TRAVA = threading.Lock()
+_TRAVA = threading.Lock()  # trava para não iniciar dois treinos ou importações ao mesmo tempo
 
 # Importação em segundo plano: no máximo uma por vez, e nunca junto com um treino
 # (o treino leria a série enquanto ela é regravada).
@@ -129,18 +132,18 @@ DURACAO = {
 }
 
 
-# ----------------------------------------------------------------------
 # Auxiliares
-# ----------------------------------------------------------------------
+
+# Retorna a série da base ativa, lida do banco só na primeira vez (depois vem do
+# _CACHE); None se o banco ainda estiver vazio.
 def _serie():
     if _CACHE["serie"] is None:
         serie = _REPO.carregar_serie()
         _CACHE["serie"] = serie if len(serie) else None
     return _CACHE["serie"]
 
-
+# Números da série já carregada, exibidos na tela de importação.
 def _resumo(serie):
-    """Números da série já carregada, exibidos na tela de importação."""
     if serie is None:
         return None
     regs = serie.registros
@@ -168,9 +171,8 @@ def _resumo(serie):
         "faixas": faixas,
     }
 
-
+# Resumo de uma execução para tabelas e listas de seleção.
 def _linha(execucao):
-    """Resumo de uma execução para tabelas e listas de seleção."""
     m = execucao.metrica
     tipo = T(execucao.tipo_modelo).value
     return {
@@ -187,66 +189,70 @@ def _linha(execucao):
         "rotulo": f"nº {execucao.id} · {NOME_MODELO[tipo]} · semente {execucao.semente_aleatoria}",
     }
 
-
+# Converte ids vindos de formulário/URL, sem repetição e na ordem.
 def _ids(valores):
-    """Converte ids vindos de formulário/URL, sem repetição e na ordem."""
     vistos = []
     for v in valores:
         if str(v).strip().isdigit() and int(v) not in vistos:
             vistos.append(int(v))
     return vistos
 
-
+# Retorna a execução do banco pelo id, ou None se ela não existir.
 def _buscar(id_execucao):
     try:
         return _REPO.buscar_execucao(id_execucao)
     except KeyError:
         return None
 
-
+# Retorna o texto do período de teste da tela de treinamento: de jan/2025
+# (CORTE_TESTE) ao último mês da série.
 def _periodo_teste(serie):
     fim = serie.registros[-1] if serie else None
     inicio = f"{CORTE_TESTE[0]}-{CORTE_TESTE[1]:02d}"
     return f"{inicio} a {fim.rotulo}" if fim else inicio
 
 
-# Filtros de formatação (padrão brasileiro)
+# Filtros de formatação (padrão brasileiro), usados nos templates HTML.
+# milhar: número com ponto de milhar; mostra um traço quando não há valor.
 @app.template_filter("milhar")
 def _f_milhar(v):
     return "—" if v is None else milhar(v)
 
-
+# pct: número em percentual com vírgula decimal (ex.: 4,52%).
 @app.template_filter("pct")
 def _f_pct(v, casas=2):
     return "—" if v is None else f"{v:.{casas}f}".replace(".", ",") + "%"
 
-
+# dec: número com vírgula decimal e 3 casas (ex.: 0,048).
 @app.template_filter("dec")
 def _f_dec(v, casas=3):
     return "—" if v is None else f"{v:.{casas}f}".replace(".", ",")
 
-
+# data_br: data e hora no formato dd/mm/aaaa hh:mm.
 @app.template_filter("data_br")
 def _f_data(d):
     return d.strftime("%d/%m/%Y %H:%M") if d else "—"
 
-
+# '2019-03' -> 'mar/2019', a forma usada no TCC.
 @app.template_filter("mes_ano")
 def _f_mes_ano(competencia):
-    """'2019-03' -> 'mar/2019', a forma usada no TCC."""
     ano, mes = str(competencia).split("-")
     return f"{MESES[int(mes) - 1]}/{ano}"
 
 
-# ----------------------------------------------------------------------
-# Tela 1 — Importação   (UC01 · RF01–RF06)
-# ----------------------------------------------------------------------
+# Tela 1: Importação   (UC01 · RF01–RF06)
+
+# Retorna True se a tarefa (importação ou treino) ainda está executando.
 def _em_andamento(estado):
     tarefa = estado["atual"]
     return bool(tarefa and tarefa["estado"] == "executando")
 
-
+# Roda a importação numa thread separada, para a tela não travar. Como funciona:
+# chama _ingestao.importar() com ao_ler(), que a cada arquivo lido atualiza o
+# progresso e os meses do gráfico parcial; no fim marca a tarefa como concluída ou
+# com erro.
 def _importar_em_segundo_plano(tarefa, pasta):
+    # Chamada a cada arquivo lido: soma os meses do arquivo e atualiza o progresso.
     def ao_ler(lidos, total, nome, meses):
         # um arquivo pode trazer voos de outro mês (o de jul/2022 traz alguns de
         # ago/2022): soma, como a consolidação final, para o gráfico parcial
@@ -271,19 +277,18 @@ def _importar_em_segundo_plano(tarefa, pasta):
     finally:
         tarefa["fim"] = datetime.now()
 
-
+# Segundos decorridos e percentual de arquivos lidos da importação.
 def _andamento(tarefa):
-    """Segundos decorridos e percentual de arquivos lidos da importação."""
     decorrido = int(((tarefa.get("fim") or datetime.now()) - tarefa["inicio"]).total_seconds())
     percentual = int(100 * tarefa["lidos"] / tarefa["total"]) if tarefa["total"] else 0
     return decorrido, percentual
 
-
+# Gráfico com os meses lidos até agora, no eixo da série esperada.
 def _grafico_parcial(tarefa):
-    """Gráfico com os meses lidos até agora, no eixo da série esperada."""
     return _visualizacao.grafico_serie(list(tarefa["meses"].values()), n_meses=tarefa["total"])
 
-
+# Tela de importação (GET /): série gravada, resumo, conferência de integridade
+# (RF04), gráfico e, se houver, o progresso da importação.
 @app.route("/", methods=["GET"])
 def importacao():
     serie = _serie()
@@ -307,17 +312,15 @@ def importacao():
         percentual=percentual,
     )
 
-
+# Gráfico da série gravada: todos os anos ou um ano ampliado.
 def _grafico_da_serie(serie, ano=None):
-    """Gráfico da série gravada: todos os anos ou um ano ampliado."""
     return _visualizacao.grafico_serie(serie.registros, ano=ano,
                                        simulado_ate=_ATIVA["base"].get("simulado_ate"))
 
-
+# Gráfico da aba "Gráfico", trocado sem recarregar a página quando se
+# escolhe um ano (ou "Todos") no campo acima dele.
 @app.route("/importacao/grafico", methods=["GET"])
 def grafico_serie():
-    """Gráfico da aba "Gráfico", trocado sem recarregar a página quando se
-    escolhe um ano (ou "Todos") no campo acima dele."""
     serie = _serie()
     ano = request.args.get("ano", "").strip()
     if serie is None or (ano and not (ano.isdigit() and len(ano) == 4)):
@@ -327,11 +330,10 @@ def grafico_serie():
         abort(404)   # ano fora da série
     return render_template("_grafico_serie.html", g=figura)
 
-
+# Consultado pela tela a cada meio segundo durante a importação: devolve o
+# progresso e o gráfico parcial já desenhado, sem recarregar a página.
 @app.route("/importacao/andamento", methods=["GET"])
 def andamento_importacao():
-    """Consultado pela tela a cada meio segundo durante a importação: devolve o
-    progresso e o gráfico parcial já desenhado, sem recarregar a página."""
     tarefa = _IMPORTACAO["atual"]
     if not tarefa:
         return jsonify(estado="nenhuma")
@@ -344,7 +346,9 @@ def andamento_importacao():
         grafico=render_template("_grafico_serie.html", g=figura) if figura else "",
     )
 
-
+# Recebe o formulário de importação (POST /importar). Como funciona: confere se a
+# pasta existe e se não há importação nem treino em andamento e inicia
+# _importar_em_segundo_plano() numa thread; a tela acompanha o progresso.
 @app.route("/importar", methods=["POST"])
 def importar():
     pasta = Path((request.form.get("pasta") or str(config.ANAC_ORIGEM)).strip())
@@ -365,11 +369,10 @@ def importar():
                          args=(tarefa, pasta), daemon=True).start()
     return redirect(url_for("importacao"))
 
-
+# Troca a base ativa (seletor do cabeçalho). Bloqueada durante importação
+# ou treino, que usam o repositório da base em uso.
 @app.route("/base", methods=["POST"])
 def trocar_base():
-    """Troca a base ativa (seletor do cabeçalho). Bloqueada durante importação
-    ou treino, que usam o repositório da base em uso."""
     with _TRAVA:
         if _em_andamento(_IMPORTACAO) or _em_andamento(_TAREFA):
             flash("Aguarde a importação ou o treinamento em andamento para trocar de base.", "erro")
@@ -380,12 +383,13 @@ def trocar_base():
     return redirect(request.referrer or url_for("importacao"))
 
 
-# ----------------------------------------------------------------------
-# Tela 2 — Treinamento   (UC04 · RF10–RF16, RF19)
-# ----------------------------------------------------------------------
+# Tela 2: Treinamento   (UC04 · RF10–RF16, RF19)
+
+# Lê os campos condicionais do formulário. Valores fora das opções
+# oferecidas são rejeitados.
+# Retorna os hiperparâmetros do modelo, o texto da configuração e a duração
+# esperada, mostrados na tela durante o treino.
 def _hiperparametros(tipo, form):
-    """Lê os campos condicionais do formulário. Valores fora das opções
-    oferecidas são rejeitados."""
     if tipo == T.RANDOM_FOREST and form.get("ajuste_rf") == "fixo":
         n = int(form.get("n_estimators", "200"))
         d = form.get("max_depth", "3")
@@ -408,7 +412,8 @@ def _hiperparametros(tipo, form):
         return {}, "busca em grade por validação temporal (6 configurações)", DURACAO["lstm_auto"]
     return {}, "busca em grade por validação temporal (16 configurações)", DURACAO["rf_auto"]
 
-
+# Roda o treinamento numa thread separada (a LSTM leva minutos) e anota na tarefa
+# o id da execução gravada ou o erro.
 def _treinar_em_segundo_plano(tarefa, serie, tipo, semente, hiper):
     try:
         execucao = _treinamento.executar(serie, tipo, seed=semente, hiperparametros=hiper)
@@ -418,7 +423,8 @@ def _treinar_em_segundo_plano(tarefa, serie, tipo, semente, hiper):
     finally:
         tarefa["fim"] = datetime.now()
 
-
+# Tela de treinamento (GET /treinamento): formulário, andamento do treino em curso
+# e o resultado da última execução.
 @app.route("/treinamento", methods=["GET"])
 def treinamento():
     serie = _serie()
@@ -447,7 +453,9 @@ def treinamento():
         duracao=DURACAO,
     )
 
-
+# Recebe o formulário de treino (POST /treinar). Como funciona: valida o modelo, a
+# semente e os hiperparâmetros, confere se não há treino nem importação em
+# andamento e inicia _treinar_em_segundo_plano() numa thread.
 @app.route("/treinar", methods=["POST"])
 def treinar():
     serie = _serie()
@@ -480,12 +488,13 @@ def treinar():
     return redirect(url_for("treinamento"))
 
 
-# ----------------------------------------------------------------------
-# Tela 3 — Comparação   (UC06, UC07, UC09 · RF17, RF18, RF20, RF22)
-# ----------------------------------------------------------------------
-MAX_COMPARADAS = 3
+# Tela 3: Comparação   (UC06, UC07, UC09 · RF17, RF18, RF20, RF22)
 
+MAX_COMPARADAS = 3  # máximo de execuções mostradas na tela de comparação
 
+# Tela de comparação (GET /comparacao). Como funciona: usa as execuções pedidas na
+# URL (ou, sem pedido, as da semente 42 de cada modelo), monta o gráfico previsto x
+# real e roda o teste de Diebold-Mariano entre cada par (comparar_pares()).
 @app.route("/comparacao", methods=["GET"])
 def comparar():
     lista = _REPO.listar_execucoes()
@@ -522,9 +531,9 @@ def comparar():
     )
 
 
-# ----------------------------------------------------------------------
-# Tela 4 — Histórico   (UC08 · RF21, RF22)
-# ----------------------------------------------------------------------
+# Tela 4: Histórico   (UC08 · RF21, RF22)
+
+# Tela de histórico (GET /historico): lista as execuções gravadas, com as métricas.
 @app.route("/historico", methods=["GET"])
 def historico():
     return render_template(
@@ -533,7 +542,7 @@ def historico():
         execucoes=[_linha(e) for e in _REPO.listar_execucoes()],
     )
 
-
+# Detalhes de uma execução (GET /execucao/<id>); página 404 se o id não existir.
 @app.route("/execucao/<int:id_execucao>", methods=["GET"])
 def execucao(id_execucao):
     ex = _buscar(id_execucao)
@@ -541,12 +550,13 @@ def execucao(id_execucao):
         abort(404)
     return _render_execucao(ex)
 
-
+# RF15, com o modelo persistido pelo RF19: recarrega o modelo salvo e prevê
+# o período de teste sem retreinar, conferindo o resultado com as previsões
+# registradas. Não grava nada no banco.
+# Como funciona: chama _previsao.prever(), compara mês a mês o novo valor com o
+# gravado e mostra a maior diferença (zero quando o modelo salvo reproduz o treino).
 @app.route("/execucao/<int:id_execucao>/prever", methods=["POST"])
 def prever(id_execucao):
-    """RF15, com o modelo persistido pelo RF19: recarrega o modelo salvo e prevê
-    o período de teste sem retreinar, conferindo o resultado com as previsões
-    registradas. Não grava nada no banco."""
     ex = _buscar(id_execucao)
     if ex is None:
         abort(404)
@@ -560,7 +570,8 @@ def prever(id_execucao):
                      for p in ex.previsoes), default=0.0)
     return _render_execucao(ex, reprevisao=novas_por_mes, diferenca=diferenca)
 
-
+# Monta a tela de detalhes da execução: hiperparâmetros, arquivo do modelo e a
+# tabela mês a mês (real, previsto, erro % e, se houver, o valor reprevisto).
 def _render_execucao(ex, reprevisao=None, diferenca=None):
     previsoes = [{
         "mes": p.rotulo, "alta": p.alta_temporada, "real": p.valor_real,
@@ -581,10 +592,9 @@ def _render_execucao(ex, reprevisao=None, diferenca=None):
         diferenca=diferenca,
     )
 
-
+# RF22: CSV com metadados, previsões e métricas das execuções escolhidas.
 @app.route("/exportar", methods=["POST"])
 def exportar():
-    """RF22: CSV com metadados, previsões e métricas das execuções escolhidas."""
     ids = _ids(request.form.getlist("ids"))
     execucoes = [e for e in (_buscar(i) for i in ids) if e is not None]
     if not execucoes:

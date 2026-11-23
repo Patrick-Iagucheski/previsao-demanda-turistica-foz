@@ -1,26 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Serviço de histórico simulado (camada de aplicação) — experimento complementar.
-
-Acrescenta, ANTES da série real, um histórico fictício com o mesmo
-comportamento da demanda, para medir o efeito do volume de dados sobre os
-modelos. O conjunto de teste continua sendo 2025 REAL. A série resultante é
-gravada numa base própria (bases.json), nunca na base real do experimento.
-
-Calibração — só com os meses de TREINO (antes de CORTE_TESTE), nunca com o
-teste (RN04, RN05):
-  - sazonalidade: índice mensal médio dos dois ciclos completos do treino
-    (mar/2019–fev/2020 e jan–dez/2024), normalizado para média 1;
-  - nível: média do ciclo mar/2019–fev/2020, recuado no tempo à taxa de
-    crescimento das chegadas a Foz do Iguaçu entre 1999 e 2009 medida por
-    Casanova et al. (2012, Tabela 3): de 764.917 para 866.242, ≈ 1,25% a.a.;
-  - ruído: desvio-padrão dos meses desses ciclos em relação a
-    nível × sazonalidade, aplicado como variação aleatória multiplicativa.
-A semente fixa torna a série simulada reprodutível (RNF01).
-
-Uso (cria a base "historico20" a partir da série da base real):
-    python aplicacao/simulacao.py
-"""
 import random
 import statistics
 import sys
@@ -34,26 +11,56 @@ from aplicacao.preprocessamento import CORTE_TESTE
 from dominio.entidades import BlocoTemporalEnum, RegistroMensal, SerieTemporal
 from dominio.regras import bloco_temporal, eh_alta_temporada
 
+# Serviço de histórico simulado (camada de aplicação): experimento complementar.
+#
+# Acrescenta, ANTES da série real, um histórico fictício com o mesmo
+# comportamento da demanda, para medir o efeito do volume de dados sobre os
+# modelos. O conjunto de teste continua sendo 2025 REAL. A série resultante é
+# gravada numa base própria (bases.json), nunca na base real do experimento.
+#
+# Calibração: só com os meses de TREINO (antes de CORTE_TESTE), nunca com o
+# teste (RN04, RN05):
+#   - sazonalidade: índice mensal médio dos dois ciclos completos do treino
+#     (mar/2019–fev/2020 e jan–dez/2024), normalizado para média 1;
+#   - nível: média do ciclo mar/2019–fev/2020, recuado no tempo à taxa de
+#     crescimento das chegadas a Foz do Iguaçu entre 1999 e 2009 medida por
+#     Casanova et al. (2012, Tabela 3): de 764.917 para 866.242, ≈ 1,25% a.a.;
+#   - ruído: desvio-padrão dos meses desses ciclos em relação a
+#     nível × sazonalidade, aplicado como variação aleatória multiplicativa.
+# A semente fixa torna a série simulada reprodutível (RNF01).
+#
+# Uso (cria a base "historico20" a partir da série da base real):
+#     python aplicacao/simulacao.py
+
+# Constante definida para a taxa de crescimento anual das chegadas a Foz
+# (Casanova et al., 2012): de 764.917 (1999) para 866.242 (2009), cerca de 1,25%
+# ao ano; usada no método gerar() para recuar o nível no tempo.
 TAXA_ANUAL_CASANOVA = (866_242 / 764_917) ** (1 / 10) - 1
 INICIO_REAL = (2019, 3)          # primeiro mês da base da ANAC usada no TCC
+# Os dois ciclos completos de 12 meses do treino (mar/2019 a fev/2020 e jan a
+# dez/2024), usados no método calibrar().
 CICLOS_TREINO = (((2019, 3), (2020, 2)), ((2024, 1), (2024, 12)))
 
-
+# Retorna a posição do mês numa contagem contínua (ano x 12 + mês - 1).
 def _indice(ano: int, mes: int) -> int:
     return ano * 12 + mes - 1
 
-
+# Gera o histórico fictício e o junta à série real.
 class HistoricoSimuladoService:
-    """Gera o histórico fictício e o junta à série real."""
-
+    # Guarda a semente (para a simulação sair igual a cada vez), quantos anos
+    # simular (padrão 20) e a taxa anual de crescimento.
     def __init__(self, semente: int = config.SEED, anos: int = 20,
                  taxa_anual: float = TAXA_ANUAL_CASANOVA):
         self.semente = semente
         self.anos = anos
         self.taxa_anual = taxa_anual
 
+    # Parâmetros do gerador, estimados só nos ciclos completos do treino.
+    # Como funciona: para cada mês do ano, calcula quanto ele fica acima ou
+    # abaixo da média do seu ciclo (fator sazonal) e tira a média dos dois
+    # ciclos; o nível é a média do ciclo 2019/20; o ruído é o desvio-padrão de
+    # quanto cada mês real se afastou do esperado.
     def calibrar(self, serie_real: SerieTemporal) -> Dict[str, object]:
-        """Parâmetros do gerador, estimados só nos ciclos completos do treino."""
         por_mes = {(r.ano, r.mes): r.desembarques for r in serie_real.registros
                    if not r.pandemia and (r.ano, r.mes) < CORTE_TESTE}
         ciclos: List[List[Tuple[int, float]]] = []
@@ -81,9 +88,12 @@ class HistoricoSimuladoService:
             "ruido": statistics.stdev(desvios),
         }
 
+    # Série real precedida de `anos` anos simulados (mar/1999 a fev/2019
+    # com os valores padrão).
+    # Como funciona: para cada mês simulado, recua o nível de 2019 pela taxa
+    # anual (quanto mais antigo, menor), multiplica pelo fator sazonal do mês e
+    # aplica uma variação aleatória; no fim, junta simulados e reais em ordem.
     def gerar(self, serie_real: SerieTemporal) -> SerieTemporal:
-        """Série real precedida de `anos` anos simulados (mar/1999 a fev/2019
-        com os valores padrão)."""
         p = self.calibrar(serie_real)
         rng = random.Random(self.semente)
         simulados = []
@@ -103,7 +113,6 @@ class HistoricoSimuladoService:
         return SerieTemporal(simulados + reais).ordenar()
 
 
-# ----------------------------------------------------------------------
 if __name__ == "__main__":
     from infraestrutura.repositorios.sqlite_repo import SqliteRepository
 

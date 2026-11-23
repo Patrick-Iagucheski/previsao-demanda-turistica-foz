@@ -55,9 +55,9 @@
       <div class="campo" style="margin-bottom:0">
         <label><input type="radio" name="ajuste_rf" value="fixo"> Configuração fixa:</label>
         <label for="n_estimators">árvores</label>
-        <select name="n_estimators" id="n_estimators"><option>200</option><option>500</option></select>
+        <select class="num" name="n_estimators" id="n_estimators"><option>200</option><option>500</option></select>
         <label for="max_depth">profundidade</label>
-        <select name="max_depth" id="max_depth"><option>2</option><option selected>3</option><option>5</option><option value="none">sem limite</option></select>
+        <select class="num" name="max_depth" id="max_depth"><option>2</option><option selected>3</option><option>5</option><option value="none">sem limite</option></select>
         <span style="font-size:0.85rem;color:var(--cinza)">&mdash; {{ duracao.rf_fixo }}</span>
       </div>
     </div>
@@ -70,9 +70,9 @@
       <div class="campo" style="margin-bottom:0">
         <label><input type="radio" name="ajuste_lstm" value="fixo"> Configuração fixa:</label>
         <label for="unidades">unidades</label>
-        <select name="unidades" id="unidades"><option>8</option><option selected>16</option><option>32</option></select>
+        <select class="num" name="unidades" id="unidades"><option>8</option><option selected>16</option><option>32</option></select>
         <label for="dropout">dropout</label>
-        <select name="dropout" id="dropout"><option value="0.0">0</option><option value="0.2" selected>0,2</option></select>
+        <select class="num" name="dropout" id="dropout"><option value="0.0">0</option><option value="0.2" selected>0,2</option></select>
         <span style="font-size:0.85rem;color:var(--cinza)">&mdash; {{ duracao.lstm_fixo }}</span>
       </div>
       <p class="nota">Lookback de 3 meses (as janelas não atravessam o intervalo pandêmico — RNF03). O número de épocas é definido por parada antecipada.</p>
@@ -93,7 +93,7 @@
   {% endif %}
   <div class="rolagem">
     <table>
-      <thead><tr><th>Métrica</th><th>Escopo global</th><th>Alta temporada</th></tr></thead>
+      <thead><tr><th>Métrica</th><th class="num">Escopo global</th><th class="num">Alta temporada</th></tr></thead>
       <tbody>
         <tr><td>MAE</td><td class="num">{{ resultado.mae_g|milhar if resultado else '—' }}</td><td class="num">{{ resultado.mae_a|milhar if resultado else '—' }}</td></tr>
         <tr><td>RMSE</td><td class="num">{{ resultado.rmse_g|milhar if resultado else '—' }}</td><td class="num">{{ resultado.rmse_a|milhar if resultado else '—' }}</td></tr>

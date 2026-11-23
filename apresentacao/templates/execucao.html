@@ -24,7 +24,7 @@
   <h2>Métricas</h2>
   <div class="rolagem">
     <table>
-      <thead><tr><th>Métrica</th><th>Escopo global</th><th>Alta temporada</th></tr></thead>
+      <thead><tr><th>Métrica</th><th class="num">Escopo global</th><th class="num">Alta temporada</th></tr></thead>
       <tbody>
         <tr><td>MAE</td><td class="num">{{ e.mae_g|milhar }}</td><td class="num">{{ e.mae_a|milhar }}</td></tr>
         <tr><td>RMSE</td><td class="num">{{ e.rmse_g|milhar }}</td><td class="num">{{ e.rmse_a|milhar }}</td></tr>
@@ -41,7 +41,7 @@
   </h2>
   <div class="rolagem">
     <table>
-      <thead><tr><th>Mês</th><th>Real</th><th>Previsto</th><th>Erro</th>{% if reprevisao %}<th>Previsto pelo modelo recarregado</th>{% endif %}</tr></thead>
+      <thead><tr><th>Mês</th><th class="num">Real</th><th class="num">Previsto</th><th class="num">Erro</th>{% if reprevisao %}<th class="num">Previsto pelo modelo recarregado</th>{% endif %}</tr></thead>
       <tbody>
       {% for p in previsoes %}
         <tr>

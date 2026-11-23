@@ -1,25 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Validação cruzada da extração dos desembarques (RNF02).
-
-Confronta dois métodos independentes de obter os desembarques em Foz do Iguaçu
-a partir dos mesmos arquivos da ANAC:
-
-  MÉTODO A ("outro aeroporto") — o adotado pelo sistema. Conta os passageiros
-  de voos que DECOLAM (NR_MOVIMENTO_TIPO='D') de aeroportos brasileiros da base, tendo SBFI
-  como outro aeroporto do trecho (NR_VOO_OUTRO_AEROPORTO='SBFI'). Funciona em
-  todos os anos, pois não exige que Foz conste como aeroporto de referência.
-
-  MÉTODO B ("direto") — Foz como aeroporto de referência
-  (NR_AEROPORTO_REFERENCIA='SBFI') com movimento de POUSO
-  (NR_MOVIMENTO_TIPO='P'). Só é possível a partir de abr/2022, quando o
-  aeroporto passa a figurar como referência na base.
-
-A divergência esperada corresponde a voos internacionais cuja origem não consta
-da base brasileira — Foz é predominantemente doméstico (~98%).
-
-Uso:  python infraestrutura/validacao_extracao.py
-"""
 import sys
 from pathlib import Path
 
@@ -31,12 +9,33 @@ import config
 from dominio.regras import eh_pandemia
 from infraestrutura.anac_csv_loader import _detectar_skiprows, listar_csvs
 
+# Validação cruzada da extração dos desembarques (RNF02).
+#
+# Confronta dois métodos independentes de obter os desembarques em Foz do Iguaçu
+# a partir dos mesmos arquivos da ANAC:
+#
+#   MÉTODO A ("outro aeroporto"): o adotado pelo sistema. Conta os passageiros
+#   de voos que DECOLAM (NR_MOVIMENTO_TIPO='D') de aeroportos brasileiros da base, tendo SBFI
+#   como outro aeroporto do trecho (NR_VOO_OUTRO_AEROPORTO='SBFI'). Funciona em
+#   todos os anos, pois não exige que Foz conste como aeroporto de referência.
+#
+#   MÉTODO B ("direto"): Foz como aeroporto de referência
+#   (NR_AEROPORTO_REFERENCIA='SBFI') com movimento de POUSO
+#   (NR_MOVIMENTO_TIPO='P'). Só é possível a partir de abr/2022, quando o
+#   aeroporto passa a figurar como referência na base.
+#
+# A divergência esperada corresponde a voos internacionais cuja origem não consta
+# da base brasileira; Foz é predominantemente doméstico (~98%).
+#
+# Uso:  python infraestrutura/validacao_extracao.py
+
+# Colunas lidas de cada CSV (as mesmas da extração), usadas em _ler().
 COLS = [
     "ANO", "MES", "NR_AEROPORTO_REFERENCIA", "NR_MOVIMENTO_TIPO",
     "NR_VOO_OUTRO_AEROPORTO", *config.COLUNAS_PAX,
 ]
 
-
+# Lê um CSV inteiro, sem filtrar, e soma as três colunas de passageiros na coluna pax.
 def _ler(caminho: Path) -> pd.DataFrame:
     df = pd.read_csv(
         caminho,
@@ -55,7 +54,10 @@ def _ler(caminho: Path) -> pd.DataFrame:
     df["pax"] = df[config.COLUNAS_PAX].sum(axis=1)
     return df
 
-
+# Retorna uma tabela com o total de passageiros de cada mês pelo método A e pelo
+# método B. Como funciona: lê os mesmos arquivos da importação (listar_csvs()); o
+# método A soma as decolagens de outros aeroportos rumo a SBFI e o método B soma
+# os pousos com SBFI como aeroporto de referência.
 def comparar(origem: Path = None) -> pd.DataFrame:
     arquivos = listar_csvs(origem)
 

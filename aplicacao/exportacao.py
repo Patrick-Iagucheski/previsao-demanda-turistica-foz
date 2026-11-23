@@ -1,18 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Serviço de exportação (camada de aplicação) — RF22.
-
-    exportar(execucao) -> conteúdo CSV
-    exportar_lote(execucoes) -> conteúdo CSV com várias execuções
-
-Formato pensado para abrir direto no Excel em português: separador ponto e
-vírgula, vírgula decimal e marca de ordem de bytes UTF-8 (acentos corretos).
-Cada linha traz uma coluna `secao` que indica seu conteúdo:
-
-    execucao  metadados: modelo, semente, data, período de teste, hiperparâmetros
-    previsao  um mês do teste: real, previsto e erro percentual
-    metrica   uma métrica num escopo (global ou alta temporada)
-"""
 import csv
 import io
 import json
@@ -24,20 +9,41 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from dominio.entidades import EscopoAvaliacaoEnum, Execucao, TipoMetricaEnum, TipoModeloEnum
 
+# Serviço de exportação (camada de aplicação): RF22.
+#
+#     exportar(execucao) -> conteúdo CSV
+#     exportar_lote(execucoes) -> conteúdo CSV com várias execuções
+#
+# Formato pensado para abrir direto no Excel em português: separador ponto e
+# vírgula, vírgula decimal e marca de ordem de bytes UTF-8 (acentos corretos).
+# Cada linha traz uma coluna `secao` que indica seu conteúdo:
+#
+#     execucao  metadados: modelo, semente, data, período de teste, hiperparâmetros
+#     previsao  um mês do teste: real, previsto e erro percentual
+#     metrica   uma métrica num escopo (global ou alta temporada)
+
+# Colunas do CSV exportado, na ordem em que aparecem; usadas em exportar_lote().
 COLUNAS = ["secao", "id_execucao", "modelo", "semente", "data_hora", "periodo_teste",
            "hiperparametros", "mes", "alta_temporada", "valor_real", "valor_previsto",
            "erro_percentual", "escopo", "metrica", "valor"]
 
-
+# Formata o número com vírgula decimal (padrão do Excel em português); vazio quando
+# não há valor.
 def _num(v, casas=2):
     return "" if v is None else f"{v:.{casas}f}".replace(".", ",")
 
-
+# Gera o CSV com os dados de uma ou mais execuções (RF22).
 class ExportacaoCsvService:
 
+    # Retorna o CSV de uma única execução (reaproveita exportar_lote()).
     def exportar(self, execucao: Execucao) -> str:
         return self.exportar_lote([execucao])
 
+    # Retorna o CSV de várias execuções: para cada uma, uma linha de metadados, uma
+    # linha por mês previsto e uma linha por métrica.
+    # Como funciona: escreve o cabeçalho (COLUNAS) e, para cada execução, monta as
+    # linhas como dicionários; cada linha é gravada na ordem das colunas, deixando
+    # em branco o que não se aplica àquela seção.
     def exportar_lote(self, execucoes: Sequence[Execucao]) -> str:
         saida = io.StringIO()
         w = csv.writer(saida, delimiter=";", lineterminator="\r\n")
@@ -64,4 +70,6 @@ class ExportacaoCsvService:
                                "valor": _num(m.valor_metrica, 4)})
             for linha in linhas:
                 w.writerow([linha.get(c, "") for c in COLUNAS])
+        # O caractere invisível no início (marca de ordem de bytes) faz o Excel ler os
+        # acentos corretamente.
         return "﻿" + saida.getvalue()
