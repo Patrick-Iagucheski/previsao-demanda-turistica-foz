@@ -1,26 +1,26 @@
-# -*- coding: utf-8 -*-
-"""
-Portas do domínio — os contratos que as demais camadas enxergam.
-
-São interfaces abstratas, sem dependência de biblioteca externa: é o que
-permite trocar a biblioteca de um modelo (scikit-learn, TensorFlow) ou o
-SQLite pelo PostgreSQL sem tocar no núcleo (Martin, 2019; Percival; Gregory,
-2020; Seção 4.6.2 do TCC). As métricas e o teste de Diebold-Mariano não
-passam por porta: o AvaliacaoService usa scikit-learn, statsmodels e SciPy
-diretamente, por serem cálculo, e não entrada e saída.
-
-As assinaturas seguem o Diagrama de Classes: Arquitetura Implementada
-(Seção 4.3.4 do TCC; docs/diagramas/06_classes_arquitetura_planejada.puml).
-
-Adaptadores concretos:
-    IForecaster          -> infraestrutura/modelos/{naive,random_forest,lstm}.py
-    ISerieRepository     -> infraestrutura/repositorios/sqlite_repo.py
-    IExecucaoRepository  -> infraestrutura/repositorios/sqlite_repo.py
-"""
 from abc import ABC, abstractmethod
 from typing import List
 
+# Portas do domínio: os contratos que as demais camadas enxergam.
+#
+# São interfaces abstratas, sem dependência de biblioteca externa: é o que
+# permite trocar a biblioteca de um modelo (scikit-learn, TensorFlow) ou o
+# SQLite pelo PostgreSQL sem tocar no núcleo (Martin, 2019; Percival; Gregory,
+# 2020; Seção 4.6.2 do TCC). As métricas e o teste de Diebold-Mariano não
+# passam por porta: o AvaliacaoService usa scikit-learn, statsmodels e SciPy
+# diretamente, por serem cálculo, e não entrada e saída.
+#
+# As assinaturas seguem o Diagrama de Classes: Arquitetura do Sistema
+# (Seção 4.3.3 do TCC; docs/diagramas/06_classes_arquitetura_planejada.puml).
+#
+# Adaptadores concretos:
+#     IForecaster          -> infraestrutura/modelos/{naive,random_forest,lstm}.py
+#     ISerieRepository     -> infraestrutura/repositorios/sqlite_repo.py
+#     IExecucaoRepository  -> infraestrutura/repositorios/sqlite_repo.py
 
+# Interface comum aos três modelos. Esta classe ficou com as explicações entre aspas
+# triplas (docstrings) porque o TCC a reproduz exatamente como está aqui, no Código
+# "Interface IForecaster" do Capítulo 4.
 class IForecaster(ABC):
     """Contrato comum aos três modelos comparados (RF11, RF12, RF13).
 
@@ -54,39 +54,40 @@ class IForecaster(ABC):
         (RF19 / RNF01: reprodutibilidade)."""
         return {}
 
-
+# Persistência da série mensal de desembarques.
 class ISerieRepository(ABC):
-    """Persistência da série mensal de desembarques."""
-
+    # Grava no banco a série mensal de desembarques.
     @abstractmethod
     def salvar_serie(self, serie) -> None:
         ...
 
+    # Lê do banco a série mensal gravada.
     @abstractmethod
     def carregar_serie(self):
         ...
 
-
+# Persistência dos experimentos, o que torna o estudo auditável
+# (RF19, RF21: cada métrica rastreável até a execução e a semente).
+#
+# Como Execucao compõe suas Metricas (composição no diagrama de classes),
+# salvar_execucao grava também as métricas associadas.
 class IExecucaoRepository(ABC):
-    """Persistência dos experimentos — o que torna o estudo auditável
-    (RF19, RF21: cada métrica rastreável até a execução e a semente).
-
-    Como Execucao compõe suas Metricas (composição no diagrama de classes),
-    salvar_execucao grava também as métricas associadas.
-    """
-
+    # Grava a execução e suas métricas; devolve o id atribuído.
     @abstractmethod
     def salvar_execucao(self, execucao) -> int:
-        """Grava a execução e suas métricas; devolve o id atribuído."""
+        ...
 
+    # Grava as previsões mês a mês de uma execução.
     @abstractmethod
     def salvar_previsoes(self, id_execucao: int, previsoes) -> None:
         ...
 
+    # Retorna as execuções gravadas (usado na tela de histórico).
     @abstractmethod
     def listar_execucoes(self) -> List:
         ...
 
+    # Retorna uma execução gravada, a partir do seu id.
     @abstractmethod
     def buscar_execucao(self, id_execucao: int):
         ...
