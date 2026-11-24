@@ -1,7 +1,7 @@
 Script: testes/teste_integridade_sintetica.py
-Executado em: 20/11/2026 12:51 (Windows 11, Python 3.12.2)
-Código do sistema testado: commit b022c47 do repositório (b022c474b188a2bbdd3739654e498c974a223993), sem alterações locais nos módulos do sistema
-Banco: cópia temporária de dados/experimentos.db (o original não é alterado)
+Executado em: 23/11/2026 21:45 (Windows 11, Python 3.12.2)
+Código do sistema testado: commit 63e935d do repositório (63e935da888cd9acc6d291d186d9433acd1dacfc), sem alterações locais nos módulos do sistema
+Banco: não usa o banco (séries sintéticas montadas em memória)
 Duração: 0 s | código de saída: 0
 ------------------------------------------------------------------------------
   [ok] íntegra                   íntegra=True
