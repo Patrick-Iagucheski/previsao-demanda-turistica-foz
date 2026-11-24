@@ -13,32 +13,27 @@
   <line x1="{{ g.x0 }}" y1="{{ t.y }}" x2="{{ g.x1 }}" y2="{{ t.y }}" stroke="#e8eeef" stroke-width="1"/>
   <text x="{{ g.x0 - 8 }}" y="{{ t.y + 3.5 }}" font-size="10" fill="#5e7075" text-anchor="end" font-family="Consolas,monospace">{{ t.texto }}</text>
   {% endfor %}
-  {% if g.divisa_simulado %}
-  <line x1="{{ g.divisa_simulado }}" y1="{{ g.y0 }}" x2="{{ g.divisa_simulado }}" y2="{{ g.y1 }}" stroke="#5e7075" stroke-width="1" stroke-dasharray="2 3"/>
-  <text x="{{ g.divisa_simulado - 4 }}" y="{{ g.y1 - 6 }}" font-size="10" fill="#5e7075" text-anchor="end">simulado</text>
-  <text x="{{ g.divisa_simulado + 4 }}" y="{{ g.y1 - 6 }}" font-size="10" fill="{{ g.cor }}">real</text>
-  {% endif %}
   {% for c in g.comparacao %}
   <polyline fill="none" stroke="#b9c6c9" stroke-width="1.6" stroke-dasharray="4 3" stroke-linejoin="round"
     points="{% for p in c %}{{ p.x }},{{ p.y }} {% endfor %}"/>
   {% endfor %}
   {% for seg in g.segmentos %}
-  <polyline fill="none" stroke="{{ g.cor_simulado if seg.simulado else g.cor }}" stroke-width="{{ 1.6 if seg.simulado else 2.2 }}"
-    stroke-dasharray="{{ '5 3' if seg.simulado else '' }}" stroke-linejoin="round"
+  <polyline fill="none" stroke="{{ g.cor }}" stroke-width="2.2"
+    stroke-linejoin="round"
     points="{% for p in seg.pontos %}{{ p.x }},{{ p.y }} {% endfor %}"/>
   {% endfor %}
-  {% for seg in g.segmentos %}{% for p in seg.pontos %}{% if not (loop.first and seg.repete) %}
-  {% if g.ano %}<circle class="marca" cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="{{ g.cor_simulado if p.simulado else g.cor }}" stroke="#fff" stroke-width="1"/>
+  {% for seg in g.segmentos %}{% for p in seg.pontos %}
+  {% if g.ano %}<circle class="marca" cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="{{ g.cor }}" stroke="#fff" stroke-width="1"/>
   <text x="{{ p.x }}" y="{{ p.y - 10 }}" font-size="10.5" fill="#16262b" text-anchor="middle" font-family="Consolas,monospace">{{ p.valor_curto }}</text>
-  {% elif not g.longa %}<circle class="marca" cx="{{ p.x }}" cy="{{ p.y }}" r="2.6" fill="{{ g.cor_simulado if p.simulado else g.cor }}" stroke="#fff" stroke-width="0.8"/>
+  {% elif not g.longa %}<circle class="marca" cx="{{ p.x }}" cy="{{ p.y }}" r="2.6" fill="{{ g.cor }}" stroke="#fff" stroke-width="0.8"/>
   {% elif p.alta %}<circle class="marca" cx="{{ p.x }}" cy="{{ p.y }}" r="2.6" fill="{{ g.cor_alta }}"/>{% endif %}
   <circle class="alvo" cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 4 if g.longa else (12 if g.ano else 8) }}" fill="transparent"
     data-ano="{{ p.ano }}" data-titulo="{{ p.titulo }}" data-valor="{{ p.valor }}"
     data-var-mes="{{ p.var_mes.texto }}" data-sinal-mes="{{ p.var_mes.sinal }}"
     data-rotulo-ano="{{ p.rotulo_ano }}" data-var-ano="{{ p.var_ano.texto }}" data-sinal-ano="{{ p.var_ano.sinal }}"
     data-alta="{{ 'sim' if p.alta_temporada else 'não' }}" data-pandemia="{{ 'sim, fora da análise' if p.pandemia else 'não' }}"
-    data-bloco="{{ p.bloco }}" data-origem="{{ p.origem }}" aria-label="{{ p.titulo }}: {{ p.valor }} passageiros"></circle>
-  {% endif %}{% endfor %}{% endfor %}
+    data-bloco="{{ p.bloco }}" aria-label="{{ p.titulo }}: {{ p.valor }} passageiros"></circle>
+  {% endfor %}{% endfor %}
   {% for r in g.rotulos_x %}
   <text x="{{ r.x }}" y="{{ g.y1 + 18 }}" font-size="10" fill="#5e7075" text-anchor="middle" font-family="Consolas,monospace">{{ r.texto }}</text>
   {% endfor %}
@@ -47,7 +42,6 @@
 </div>
 <div class="legenda">
   {% if g.comparacao %}<span><i class="chave" style="border-top:2px dashed #b9c6c9"></i> {{ g.ano - 1 }} (comparação)</span>{% endif %}
-  {% if g.tem_simulado %}<span><i class="chave" style="border-top:2px dashed {{ g.cor_simulado }}"></i> Desembarques (simulado)</span>{% endif %}
   <span><i class="chave" style="border-top:2.2px solid {{ g.cor }}"></i> Desembarques (real)</span>
   {% if g.longa %}<span><i class="chave" style="width:8px;height:8px;border-radius:50%;background:{{ g.cor_alta }}"></i> Alta temporada</span>
   {% elif g.faixas_alta %}<span><i class="chave" style="border-top:9px solid #d9f2e3"></i> Alta temporada</span>{% endif %}

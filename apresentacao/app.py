@@ -97,7 +97,7 @@ def _montar_servicos(id_base):
     base = _BASES[id_base]
     _REPO = SqliteRepository(os.environ.get("TCC_BANCO") or (config.RAIZ / base["arquivo"]))
     _REPO.criar_esquema()
-    # os modelos de cada base simulada ficam à parte dos do experimento real
+    # os modelos da base de demonstração ficam à parte dos do experimento real
     pasta_modelos = os.environ.get("TCC_MODELOS") or (
         config.MODELOS if base["tipo"] == "real" else config.MODELOS / id_base)
     _ingestao = IngestaoService(AnacCsvLoader().carregar_serie, _REPO)
@@ -314,8 +314,7 @@ def importacao():
 
 # Gráfico da série gravada: todos os anos ou um ano ampliado.
 def _grafico_da_serie(serie, ano=None):
-    return _visualizacao.grafico_serie(serie.registros, ano=ano,
-                                       simulado_ate=_ATIVA["base"].get("simulado_ate"))
+    return _visualizacao.grafico_serie(serie.registros, ano=ano)
 
 # Gráfico da aba "Gráfico", trocado sem recarregar a página quando se
 # escolhe um ano (ou "Todos") no campo acima dele.

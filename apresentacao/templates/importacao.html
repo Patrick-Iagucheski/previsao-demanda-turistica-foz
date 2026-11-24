@@ -42,7 +42,7 @@
 
 {% if resumo %}
 <div class="painel">
-  <h2>Resultado da importação {% if base_ativa.tipo == 'simulada' %}<span class="selo alta">dados simulados até {{ base_ativa.simulado_ate|mes_ano }}</span>{% else %}<span class="selo ok">dados reais</span>{% endif %}</h2>
+  <h2>Resultado da importação <span class="selo ok">dados reais</span></h2>
   <dl class="numeros">
     <div><dt>Aeroporto</dt><dd style="font-size:1.2rem">{{ resumo.iata }} / {{ resumo.icao }}<small>{{ resumo.aeroporto }}</small></dd></div>
     <div><dt>Período</dt><dd style="font-size:1.075rem">{{ resumo.periodo }}<small>cobertura da série</small></dd></div>
@@ -87,10 +87,6 @@
         <p>Cada voo que decola de outro aeroporto rumo a Foz leva os passageiros que vão desembarcar lá (regra RN01). Por isso somar uma
           coluna inteira do arquivo dá o total de todos os aeroportos, não o de Foz.</p>
         <p><i>Exemplo, abr/2020:</i> 10 voos &rarr; 341 + 178 + 71 = <b>590</b>.</p>
-        {% if base_ativa.tipo == 'simulada' %}
-        <p><b>Base simulada:</b> os meses marcados como &ldquo;simulado&rdquo; ({{ registros[0].rotulo|mes_ano }} a {{ base_ativa.simulado_ate|mes_ano }})
-          não vêm de CSV. São gerados pelo sistema a partir do padrão da série real.</p>
-        {% endif %}
       </div>
     </details>
   </h2>
@@ -130,7 +126,7 @@
         <p class="erro-ano" id="erro-ano" role="alert"></p>
         <div id="grafico-serie">{% with g = figura_serie %}{% include "_grafico_serie.html" %}{% endwith %}</div>
       </div>
-      <p class="nota">{% if base_ativa.tipo == 'simulada' %}Até {{ base_ativa.simulado_ate|mes_ano }} os meses são simulados; a partir daí, dados reais da ANAC. {% endif %}Passe o cursor sobre um mês para ver os passageiros e as variações; escolha ou digite um ano (ou clique num ponto) para ampliar.</p>
+      <p class="nota">Passe o cursor sobre um mês para ver os passageiros e as variações; escolha ou digite um ano (ou clique num ponto) para ampliar.</p>
     </div>
 
     <div class="aba-conteudo" id="conteudo-tabela" role="tabpanel">
@@ -151,7 +147,7 @@
             {% endfor %}
             {% set ns.anterior = r.rotulo %}
             <tr{% if r.pandemia %} class="linha-pandemia"{% elif r.alta_temporada %} class="linha-alta"{% endif %}>
-              <td>{{ r.ano }}-{{ '%02d' % r.mes }}{% if base_ativa.tipo == 'simulada' and r.rotulo <= base_ativa.simulado_ate %} <span class="selo alta">simulado</span>{% endif %}</td>
+              <td>{{ r.ano }}-{{ '%02d' % r.mes }}</td>
               <td class="num">{{ '{:,}'.format(r.desembarques|int).replace(',', '.') }}</td>
               <td>{{ 'sim' if r.alta_temporada else '—' }}</td>
               <td>{{ 'sim' if r.pandemia else '—' }}</td>
@@ -251,8 +247,7 @@
         + '<div class="dica-sep"></div>'
         + linha("Alta temporada", d.alta, d.alta === "sim" ? "sobe" : "")
         + linha("Pandemia", d.pandemia)
-        + linha("Bloco", d.bloco)
-        + (d.origem ? linha("Origem", d.origem) : "");
+        + linha("Bloco", d.bloco);
       var area = caixa.parentNode.getBoundingClientRect(), ponto = alvo.getBoundingClientRect();
       caixa.style.display = "block";
       var x = ponto.left - area.left + ponto.width / 2 + 12;

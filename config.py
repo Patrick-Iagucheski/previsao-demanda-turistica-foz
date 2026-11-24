@@ -27,8 +27,8 @@ BANCO = RAIZ / "dados" / "experimentos.db"
 # Modelos treinados e serializados (ds_caminho_modelo aponta para cá).
 MODELOS = RAIZ / "dados" / "modelos"
 
-# Bases de dados selecionáveis na interface: a real e as de experimentos
-# complementares (ex.: histórico simulado). Cada base é um arquivo SQLite próprio.
+# Bases de dados selecionáveis na interface: a real e a de demonstração e
+# testes. Cada base é um arquivo SQLite próprio.
 BASES = RAIZ / "bases.json"
 
 # Lista das bases e a base padrão, lidas de bases.json.

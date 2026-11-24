@@ -14,7 +14,6 @@ dados/brutos/*
 dados/backup/
 dados/modelos/
 dados/experimentos_demonstracao.db
-dados/historico_simulado_20anos.db
 
 # Figuras geradas pelos notebooks e scripts
 *.png

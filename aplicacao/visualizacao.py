@@ -23,7 +23,7 @@ from dominio.entidades import Execucao, RegistroMensal, SerieTemporal, TipoModel
 # Os meses de alta temporada recebem faixa âmbar, como no restante do sistema.
 # No gráfico da série, a alta temporada recebe faixa verde-clara (pontos verdes
 # nas séries com mais de dez anos) e a pandemia, faixa cinza, as mesmas cores
-# das linhas da tabela da tela de importação; o trecho simulado é tracejado.
+# das linhas da tabela da tela de importação.
 
 # Abreviações dos meses, usadas nos rótulos dos gráficos e das telas.
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun",
@@ -33,7 +33,6 @@ NOME_MODELO = {"naive": "Naïve sazonal", "random_forest": "Random Forest", "lst
 # Cor de cada modelo nos gráficos (as mesmas das figuras do Capítulo 5).
 COR_MODELO = {"naive": "#2a78d6", "random_forest": "#eb6834", "lstm": "#1baf7a"}
 COR_REAL = "#0b3c49"  # cor da linha do valor real
-COR_SIMULADO = "#7aa9b2"   # trecho fictício da base simulada (tracejado)
 COR_ALTA = "#1d9e5a"       # pontos de alta temporada nas séries longas
 # Tracejado e marcador de cada execução do mesmo modelo (a 1ª com linha contínua
 # e círculo, a 2ª tracejada e quadrado...), usados em grafico_previsto_real().
@@ -137,18 +136,15 @@ class VisualizacaoService:
     # Geometria da série consolidada (todos os meses, com a pandemia).
     # n_meses reserva o eixo horizontal para a série esperada: durante a
     # importação, o gráfico cresce da esquerda para a direita sem mudar de
-    # escala a cada arquivo lido. Um mês ausente interrompe a linha.
-    # simulado_ate ('AAAA-MM', base simulada) separa o trecho fictício, que é
-    # desenhado tracejado. Cada ponto leva os dados da caixa de detalhes
-    # exibida ao passar o cursor.
+    # escala a cada arquivo lido. Um mês ausente interrompe a linha. Cada
+    # ponto leva os dados da caixa de detalhes exibida ao passar o cursor.
     # ano amplia um único ano: os 12 meses com o valor escrito em cada ponto
     # e o ano anterior como linha de comparação, na mesma escala vertical da
     # série inteira (para que anos diferentes possam ser comparados).
     # Como funciona: calcula a escala, cria um ponto por mês com ponto(), quebra
-    # a linha onde falta mês ou onde o simulado vira real e monta as faixas de
-    # pandemia e de alta temporada, os rótulos do eixo e a lista de anos.
+    # a linha onde falta mês e monta as faixas de pandemia e de alta temporada,
+    # os rótulos do eixo e a lista de anos.
     def grafico_serie(self, registros: Sequence[RegistroMensal], n_meses: int = 0,
-                      simulado_ate: Optional[str] = None,
                       ano: Optional[int] = None) -> Optional[Dict]:
         todos = sorted(registros, key=lambda r: (r.ano, r.mes))
         if not todos:
@@ -186,10 +182,9 @@ class VisualizacaoService:
             return {"texto": f"{v:+.1f}%".replace(".", ","), "sinal": "sobe" if v >= 0 else "desce"}
 
         # Monta um ponto da série: a posição no gráfico e os dados da caixa de detalhes
-        # (valor, variações, alta temporada, pandemia, bloco e origem).
+        # (valor, variações, alta temporada, pandemia e bloco).
         def ponto(r, i):
             k = _indice(r.ano, r.mes)
-            simulado = bool(simulado_ate) and r.rotulo <= simulado_ate
             return {
                 "x": round(px(i), 1), "y": round(py(r.desembarques), 1),
                 "ano": r.ano,
@@ -204,24 +199,17 @@ class VisualizacaoService:
                 "pandemia": r.pandemia,
                 "bloco": "—" if r.pandemia else (
                     "1 (pré-pandemia)" if int(r.bloco_temporal) == 1 else "2 (pós-pandemia)"),
-                "origem": ("simulado" if simulado else "dados reais da ANAC") if simulado_ate else "",
-                "simulado": simulado,
             }
 
-        # trechos contínuos da linha: um mês ausente ou a passagem do simulado
-        # para o real começam um trecho novo (o real recomeça no último simulado,
-        # para a linha não ter falha)
+        # trechos contínuos da linha: um mês ausente começa um trecho novo
         segmentos: List[Dict] = []
         anterior = None
         for r in regs:
             i = _indice(r.ano, r.mes) - inicio
-            p = ponto(r, i)
-            if anterior is None or i != anterior[0] + 1:
-                segmentos.append({"simulado": p["simulado"], "repete": False, "pontos": []})
-            elif p["simulado"] != segmentos[-1]["simulado"]:
-                segmentos.append({"simulado": p["simulado"], "repete": True, "pontos": [anterior[1]]})
-            segmentos[-1]["pontos"].append(p)
-            anterior = (i, p)
+            if anterior is None or i != anterior + 1:
+                segmentos.append({"pontos": []})
+            segmentos[-1]["pontos"].append(ponto(r, i))
+            anterior = i
 
         # faixas contínuas de pandemia (uma por trecho) e meses de alta fora dela
         pandemia: List[Tuple[int, int]] = []
@@ -260,36 +248,18 @@ class VisualizacaoService:
                 comparacao[-1].append({"x": round(px(m - 1), 1), "y": round(py(v), 1)})
             comparacao = [c for c in comparacao if len(c) > 1]
 
-        divisa = None
-        sim = [ponto_["x"] for seg in segmentos if seg["simulado"] for ponto_ in seg["pontos"]]
-        if sim and any(not seg["simulado"] for seg in segmentos):
-            divisa = round(max(sim) + dx / 2, 1)
-
         anos_serie = sorted({r.ano for r in todos})
 
-        # Segunda linha da lista de anos: origem, pandemia, meses e total.
+        # Segunda linha da lista de anos: dados reais, pandemia, meses e total.
         def resumo_do_ano(a):
             meses = [r for r in todos if r.ano == a]
-            simulados = sum(1 for r in meses if simulado_ate and r.rotulo <= simulado_ate)
-            origem = ("dados reais" if not simulados else "simulado" if simulados == len(meses)
-                      else f"simulado até {MESES[simulados - 1 + meses[0].mes - 1]}, real depois")
             pandemia = " · pandemia" if any(r.pandemia for r in meses) else ""
             total = milhar(sum(r.desembarques for r in meses))
-            return f"{origem}{pandemia} · {len(meses)} meses · {total} passageiros"
+            return f"dados reais{pandemia} · {len(meses)} meses · {total} passageiros"
         if ano is None:
             titulo = f"Todos os anos · {anos_serie[0]} a {anos_serie[-1]}"
         else:
-            origem = ""
-            if simulado_ate:
-                simulados = [r for r in regs if r.rotulo <= simulado_ate]
-                if len(simulados) == len(regs):
-                    origem = " · simulado"
-                elif simulados:
-                    origem = (f" · simulado até {MESES[simulados[-1].mes - 1]}, "
-                              f"real a partir de {MESES[simulados[-1].mes % 12]}")
-                else:
-                    origem = " · dados reais"
-            titulo = f"{ano}{origem}" + (" · pandemia" if any(r.pandemia for r in regs) else "")
+            titulo = f"{ano}" + (" · pandemia" if any(r.pandemia for r in regs) else "")
 
         return {
             "largura": LARGURA, "altura": ALTURA,
@@ -310,10 +280,7 @@ class VisualizacaoService:
                                  "largura": round((b - a + 1) * dx, 1),
                                  "meio": round((px(a) + px(b)) / 2, 1)} for a, b in pandemia],
             "segmentos": segmentos,
-            "divisa_simulado": divisa,
-            "tem_simulado": bool(sim),
             "cor": COR_REAL,
-            "cor_simulado": COR_SIMULADO,
             "cor_alta": COR_ALTA,
             "longa": longa,
         }

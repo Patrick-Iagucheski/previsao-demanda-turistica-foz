@@ -56,8 +56,8 @@ Sistema web (abre em http://localhost:5000):
 python apresentacao\app.py
 ```
 
-Telas: Importação, Treinar, Comparar e Histórico. As outras bases do seletor (demonstração e
-simulada) são criadas vazias quando escolhidas.
+Telas: Importação, Treinar, Comparar e Histórico. A base de demonstração do seletor é criada
+vazia quando escolhida.
 
 Notebooks:
 
@@ -101,9 +101,9 @@ python testes\teste_telas.py
 | `aplicacao\avaliacao.py` | autotestes das métricas (MAE, RMSE e MAPE) e do teste de Diebold-Mariano | nada |
 | `teste_integridade_sintetica` | a rotina de integridade (RF04) com séries sintéticas: mês repetido, valor negativo, valor ausente e lacunas | nada |
 | `teste_modelos_salvos` | os modelos salvos das 11 execuções reproduzem as 132 previsões gravadas (RF15 e RF19) | os modelos em `dados/modelos` |
-| `teste_telas` | percorre a aplicação web pelo cliente de testes do Flask, sem navegador (cerca de 3 minutos): telas, comparação, exportação, treino, importação, gráfico da série e seletor de base | os modelos em `dados/modelos` (parte 4), os CSV da ANAC (parte 8) e a base simulada (parte 9) |
+| `teste_telas` | percorre a aplicação web pelo cliente de testes do Flask, sem navegador (cerca de 3 minutos): telas, comparação, exportação, treino, importação, gráfico da série e seletor de base | os modelos em `dados/modelos` (parte 4) e os CSV da ANAC (parte 8) |
 
-Os modelos treinados e a base simulada não estão no repositório (veja Reprodutibilidade): sem
+Os modelos treinados não estão no repositório (veja Reprodutibilidade): sem
 eles, as partes que dependem deles acusam falha.
 
 ## De onde vêm os números do TCC

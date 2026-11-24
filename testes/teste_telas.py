@@ -3,8 +3,8 @@ from pathlib import Path
 
 # Teste ponta a ponta das telas, sobre uma CÓPIA do banco (o real não é tocado).
 # Resultado na Seção 5.7 do TCC. Exige, além da base incluída no repositório, os CSV
-# da ANAC (dados/brutos ou a pasta da variável ANAC_ORIGEM, parte 8), os modelos
-# salvos das 11 execuções (dados/modelos, parte 4) e a base simulada (parte 9).
+# da ANAC (dados/brutos ou a pasta da variável ANAC_ORIGEM, parte 8) e os modelos
+# salvos das 11 execuções (dados/modelos, parte 4).
 
 # Pasta raiz do projeto e pasta temporária com a cópia do banco e dos modelos
 # treinados durante o teste.
@@ -169,17 +169,17 @@ falhas += not ok(c.get("/importacao/grafico?ano=2030").status_code == 404
 falhas += not ok(texto(c.get("/importacao/grafico")).count('class="alvo"') == 81, "Todos: os 81 meses")
 
 print("9. Seletor de base")
-r = c.post("/base", data={"base": "historico20"}, follow_redirects=True)
-falhas += not ok("Base ativa: ANAC + histórico simulado" in texto(r)
-                 and "dados simulados até fev/2019" in texto(c.get("/")),
-                 "troca para a base simulada e a tela sinaliza dados simulados")
 c.post("/treinar", data={"modelo": "random_forest", "semente": "5"})
-r = c.post("/base", data={"base": "real"}, follow_redirects=True)
+r = c.post("/base", data={"base": "demonstracao"}, follow_redirects=True)
 falhas += not ok("Aguarde a importação ou o treinamento" in texto(r)
-                 and modulo._ATIVA["base"]["id"] == "historico20",
+                 and modulo._ATIVA["base"]["id"] == "real",
                  "não troca de base durante um treinamento")
 while modulo._TAREFA["atual"] and modulo._TAREFA["atual"]["estado"] == "executando":
     time.sleep(1)
+r = c.post("/base", data={"base": "demonstracao"}, follow_redirects=True)
+falhas += not ok("Base ativa: Base de demonstração e testes" in texto(r)
+                 and modulo._ATIVA["base"]["id"] == "demonstracao",
+                 "troca para a base de demonstração")
 r = c.post("/base", data={"base": "real"}, follow_redirects=True)
 falhas += not ok("Base ativa: ANAC — dados reais" in texto(r) and "dados reais" in texto(c.get("/")),
                  "volta para a base real")
