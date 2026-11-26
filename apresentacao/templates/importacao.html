@@ -50,7 +50,7 @@
     <div><dt>Fora da pandemia</dt><dd>{{ resumo.utilizaveis }}<small>utilizáveis na modelagem</small></dd></div>
     <div><dt>Alta temporada</dt><dd>{{ resumo.alta_temporada }}<small>meses jan/jul/dez</small></dd></div>
     {% set i = integridade %}
-    <div><dt>Integridade (RF04)</dt><dd style="color:{{ 'var(--ok)' if i.integra else 'var(--ambar)' }};font-size:1.2rem">{{ 'OK' if i.integra else 'ATENÇÃO' }}<small>{{ i.duplicidades|length }} duplicidade(s) · {{ i.valores_invalidos|length }} valor(es) inválido(s) · {% if i.lacunas %}{{ i.lacunas|length }} mês(es) ausente(s): {% for l in i.lacunas %}{{ l.mes|mes_ano }}{{ ' (na pandemia)' if l.na_pandemia else ' (FORA da pandemia)' }}{{ ', ' if not loop.last }}{% endfor %}{% else %}sem lacunas{% endif %}</small></dd></div>
+    <div><dt>Integridade (RF04)</dt><dd class="{{ 'ok' if i.integra else 'atencao' }}" style="font-size:1.2rem">{{ 'OK' if i.integra else 'ATENÇÃO' }}<small>{{ i.duplicidades|length }} duplicidade(s)<br>{{ i.valores_invalidos|length }} valor(es) inválido(s)<br>{% if i.lacunas %}{{ i.lacunas|length }} mês(es) ausente(s):<br>{% for l in i.lacunas %}{{ l.mes|mes_ano }}{{ ' (na pandemia)' if l.na_pandemia else ' (FORA da pandemia)' }}{{ ', ' if not loop.last }}{% endfor %}{% else %}sem lacunas{% endif %}</small></dd></div>
   </dl>
 
   <h2 style="margin-top:20px">Blocos temporais</h2>
@@ -205,8 +205,9 @@
       });
     });
   })();
+</script>
 {% if em_andamento %}
-
+<script>
   // Durante a importação, consulta o andamento a cada meio segundo e redesenha
   // o gráfico parcial; ao terminar, recarrega a página com a série gravada.
   (function consultar() {
@@ -226,8 +227,9 @@
       })
       .catch(function () { setTimeout(consultar, 2000); });
   })();
+</script>
 {% endif %}
-
+<script>
   // Caixa de detalhes do gráfico da série: ao passar o cursor num mês, mostra
   // os passageiros, as variações e as marcações do ponto (dados em data-*).
   // Delegada no documento, vale também para o gráfico que se monta na leitura.

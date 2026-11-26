@@ -32,7 +32,7 @@
   <h2>Previsto &times; real {% if figura and figura.apenas_observada %}<span class="selo ok">série observada real</span>{% endif %}</h2>
   {% if figura %}
   {% set f = figura %}
-  <div class="grafico">
+  <div class="grafico grafico-comparacao" data-colunas='{{ f.colunas|tojson }}'>
     <svg viewBox="0 0 {{ f.largura }} {{ f.altura }}" role="img" aria-label="Desembarques previstos e reais por mês">
       {% for b in f.faixas_alta %}<rect x="{{ b.x }}" y="{{ f.y0 }}" width="{{ b.largura }}" height="{{ f.y1 - f.y0 }}" fill="#fbeedc"/>{% endfor %}
       {% for t in f.ticks_y %}
@@ -44,18 +44,21 @@
         points="{% for p in s.pontos %}{{ p.x }},{{ p.y }} {% endfor %}"/>
       {% for p in s.pontos %}
         {% if s.marcador == 'quadrado' %}
-      <rect x="{{ p.x - 3.4 }}" y="{{ p.y - 3.4 }}" width="6.8" height="6.8" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></rect>
+      <rect x="{{ p.x - 3.4 }}" y="{{ p.y - 3.4 }}" width="6.8" height="6.8" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"/>
         {% elif s.marcador == 'triangulo' %}
-      <polygon points="{{ p.x }},{{ p.y - 4.4 }} {{ p.x - 4.2 }},{{ p.y + 3.2 }} {{ p.x + 4.2 }},{{ p.y + 3.2 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></polygon>
+      <polygon points="{{ p.x }},{{ p.y - 4.4 }} {{ p.x - 4.2 }},{{ p.y + 3.2 }} {{ p.x + 4.2 }},{{ p.y + 3.2 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"/>
         {% else %}
-      <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 4 if s.nome == 'Valor real' else 3.6 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"><title>{{ p.dica }}</title></circle>
+      <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 4 if s.nome == 'Valor real' else 3.6 }}" fill="{{ s.cor }}" stroke="#fff" stroke-width="1"/>
         {% endif %}
       {% endfor %}
       {% endfor %}
       {% for r in f.rotulos_x %}
       <text x="{{ r.x }}" y="{{ f.y1 + 18 }}" font-size="10" fill="#5e7075" text-anchor="middle" font-family="Consolas,monospace">{{ r.texto }}</text>
       {% endfor %}
+      <line class="guia" x1="0" y1="{{ f.y0 }}" x2="0" y2="{{ f.y1 }}" stroke="#5e7075" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>
+      {% for c in f.colunas %}<rect class="coluna-alvo" x="{{ c.x0 }}" y="{{ f.y0 }}" width="{{ c.largura }}" height="{{ f.y1 - f.y0 }}" fill="transparent" data-i="{{ loop.index0 }}"/>{% endfor %}
     </svg>
+    <div class="dica-serie" aria-hidden="true"></div>
     <div class="legenda">
       {% for s in f.series %}
       <span><i class="chave" style="border-top:{{ s.largura }}px {{ 'dashed' if s.tracejado else 'solid' }} {{ s.cor }}"></i> {{ s.nome }}</span>
@@ -112,5 +115,55 @@
   <p class="nota">Selecione ao menos duas execuções para aplicar o teste.</p>
   {% endif %}
 </div>
+
+<script>
+  // Caixa de detalhes do gráfico previsto x real: ao passar o cursor sobre um
+  // mês, mostra o valor real e o previsto por cada execução, com o erro
+  // percentual, e marca o mês com uma linha vertical. Os dados vêm do atributo
+  // data-colunas, montado por grafico_previsto_real().
+  (function () {
+    var area = document.querySelector(".grafico-comparacao");
+    if (!area) return;
+    var colunas = JSON.parse(area.getAttribute("data-colunas") || "[]");
+    var caixa = area.querySelector(".dica-serie"), guia = area.querySelector("line.guia");
+    function esc(t) {
+      return String(t).replace(/[&<>"]/g, function (c) {
+        return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c];
+      });
+    }
+    function linha(rotulo, valor) {
+      return '<div class="dica-linha"><span>' + rotulo + '</span><b>' + valor + '</b></div>';
+    }
+    area.addEventListener("mouseover", function (e) {
+      var alvo = e.target.closest && e.target.closest("rect.coluna-alvo");
+      if (!alvo) return;
+      var c = colunas[Number(alvo.getAttribute("data-i"))];
+      if (!c) return;
+      var html = '<div class="dica-titulo">' + esc(c.titulo) + '</div>' + linha("Valor real", esc(c.real));
+      if (c.modelos.length) {
+        html += '<div class="dica-sep"></div>';
+        c.modelos.forEach(function (m) {
+          html += linha('<i class="dica-cor" style="background:' + esc(m.cor) + '"></i>' + esc(m.nome),
+                        esc(m.valor) + (m.erro ? ' <span class="dica-erro">(' + esc(m.erro) + ')</span>' : ''));
+        });
+      }
+      html += '<div class="dica-sep"></div>' + linha("Alta temporada", esc(c.alta));
+      caixa.innerHTML = html;
+      guia.setAttribute("x1", c.x);
+      guia.setAttribute("x2", c.x);
+      guia.setAttribute("visibility", "visible");
+      var quadro = area.getBoundingClientRect(), col = alvo.getBoundingClientRect();
+      caixa.style.display = "block";
+      var x = col.left - quadro.left + col.width / 2 + 14;
+      if (x + caixa.offsetWidth > quadro.width) x -= caixa.offsetWidth + 28;
+      caixa.style.left = Math.max(0, x) + "px";
+      caixa.style.top = Math.max(0, col.top - quadro.top) + "px";
+    });
+    area.addEventListener("mouseleave", function () {
+      caixa.style.display = "none";
+      guia.setAttribute("visibility", "hidden");
+    });
+  })();
+</script>
 
 {% endblock %}

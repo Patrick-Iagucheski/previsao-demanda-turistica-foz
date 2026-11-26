@@ -325,6 +325,16 @@ tr.linha-lacuna td{font-style:italic}
 .dica-linha b.desce{color:#a83a2c}
 .dica-sep{border-top:1px solid var(--linha-fraca);margin:5px 0}
 
+/* caixa de detalhes do gráfico previsto x real (passar o cursor num mês) */
+.grafico-comparacao{position:relative}
+.grafico-comparacao rect.coluna-alvo{cursor:crosshair}
+.dica-cor{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.dica-erro{font-weight:400}
+
+/* cor do resultado no cartão de integridade da importação */
+.numeros dd.ok{color:var(--ok)}
+.numeros dd.atencao{color:var(--ambar)}
+
 /* seletor de ano do gráfico da série */
 .seletor-ano{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .seletor-ano b{font-size:0.925rem;color:var(--escuro)}

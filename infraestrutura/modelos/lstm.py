@@ -151,9 +151,12 @@ class LSTMModel(IForecaster):
     # Rede
 
     # Fixa a semente do Python, do NumPy e do TensorFlow e liga o modo
-    # determinístico, para o treino sair igual a cada execução (RNF01).
+    # determinístico, para o treino sair igual a cada execução (RNF01). Também cala os
+    # avisos de desempenho do TensorFlow ("retracing"), que aparecem quando a busca cria
+    # várias redes seguidas; eles não mudam os resultados.
     def _semear(self):
         import tensorflow as tf
+        tf.get_logger().setLevel("ERROR")
         tf.keras.utils.set_random_seed(self.semente)
         try:
             tf.config.experimental.enable_op_determinism()

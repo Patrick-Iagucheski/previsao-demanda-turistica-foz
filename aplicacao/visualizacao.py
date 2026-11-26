@@ -69,7 +69,8 @@ class VisualizacaoService:
     # Como funciona: junta os valores reais e previstos para achar a escala
     # vertical; converte cada mês em posição x e cada valor em posição y; monta
     # uma linha para o valor real e uma para cada execução e marca as faixas dos
-    # meses de alta temporada.
+    # meses de alta temporada. Para a caixa de detalhes, monta também uma coluna
+    # por mês, com o valor real e o previsto por cada execução.
     def grafico_previsto_real(self, execucoes: Sequence[Execucao],
                               serie: Optional[SerieTemporal] = None) -> Optional[Dict]:
         if execucoes:
@@ -98,15 +99,13 @@ class VisualizacaoService:
         py = lambda v: Y1 - (v - lo) / (hi - lo) * (Y1 - Y0)
         rotulo = lambda a, m: f"{MESES[m - 1]}/{str(a)[2:]}"
 
-        # Converte uma lista de valores em pontos do gráfico: x, y, valor e o texto da
-        # dica mostrada ao passar o cursor.
-        def pontos(vals, nome):
-            return [{"x": round(px(i), 1), "y": round(py(v), 1), "valor": milhar(v),
-                     "dica": f"{rotulo(a, m)} · {nome}: {milhar(v)}"}
+        # Converte uma lista de valores em pontos do gráfico: x, y e o valor.
+        def pontos(vals):
+            return [{"x": round(px(i), 1), "y": round(py(v), 1), "valor": milhar(v)}
                     for i, ((a, m, _), v) in enumerate(zip(meses, vals)) if v is not None]
 
         series = [{"nome": "Valor real", "cor": COR_REAL, "tracejado": "",
-                   "largura": 2.8, "marcador": "circulo", "pontos": pontos(reais, "real")}]
+                   "largura": 2.8, "marcador": "circulo", "pontos": pontos(reais)}]
         vistos: Dict[str, int] = {}
         for e in execucoes:
             tipo = TipoModeloEnum(e.tipo_modelo).value
@@ -117,8 +116,35 @@ class VisualizacaoService:
                 "nome": nome, "cor": COR_MODELO[tipo],
                 "tracejado": TRACEJADOS[k % len(TRACEJADOS)], "largura": 2.0,
                 "marcador": MARCADORES[k % len(MARCADORES)],
-                "pontos": pontos([p.valor_previsto for p in e.previsoes], NOME_MODELO[tipo]),
+                "pontos": pontos([p.valor_previsto for p in e.previsoes]),
             })
+
+        # Uma coluna por mês para a caixa de detalhes: a faixa que responde ao
+        # cursor (do meio do mês anterior ao meio do seguinte), o valor real e,
+        # para cada execução, o previsto e o erro (real - previsto) / real.
+        largura_coluna = dx if n > 1 else X1 - X0
+        colunas = []
+        for i, (a, m, alta) in enumerate(meses):
+            x = px(i)
+            esquerda = max(0.0, x - largura_coluna / 2)
+            direita = min(float(LARGURA), x + largura_coluna / 2)
+            real = reais[i]
+            modelos = []
+            for e in execucoes:
+                previsto = e.previsoes[i].valor_previsto if i < len(e.previsoes) else None
+                if previsto is None:
+                    continue
+                erro = ""
+                if real:
+                    erro = f"{(real - previsto) / real * 100:+.1f}%".replace(".", ",")
+                tipo = TipoModeloEnum(e.tipo_modelo).value
+                modelos.append({"nome": f"{NOME_MODELO[tipo]} · nº {e.id}", "cor": COR_MODELO[tipo],
+                                "valor": milhar(previsto), "erro": erro})
+            colunas.append({"x": round(x, 1), "x0": round(esquerda, 1),
+                            "largura": round(direita - esquerda, 1),
+                            "titulo": f"{MESES[m - 1]}/{a}", "alta": "sim" if alta else "não",
+                            "real": milhar(real) if real is not None else "sem dado",
+                            "modelos": modelos})
 
         return {
             "largura": LARGURA, "altura": ALTURA,
@@ -130,6 +156,7 @@ class VisualizacaoService:
             "faixas_alta": [{"x": round(px(i) - max(dx, 28) / 2, 1), "largura": round(max(dx, 28), 1)}
                             for i, (_, _, alta) in enumerate(meses) if alta],
             "series": series,
+            "colunas": colunas,
             "apenas_observada": not execucoes,
         }
 

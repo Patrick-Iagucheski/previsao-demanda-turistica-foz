@@ -35,7 +35,7 @@
   <p class="nota">MAE e RMSE em número de desembarques.</p>
 </div>
 
-<div class="painel">
+<div class="painel" id="previsoes">
   <h2>Previsões no conjunto de teste
     {% if reprevisao %}{% if diferenca is not none and diferenca < 0.5 %}<span class="selo ok">modelo recarregado: previsões idênticas</span>{% else %}<span class="selo alta">modelo recarregado: diferença de {{ diferenca|milhar }}</span>{% endif %}{% endif %}
   </h2>
@@ -57,7 +57,7 @@
   </div>
   <p class="nota">Erro = (real &minus; previsto) &divide; real; valores positivos indicam subestimação.</p>
   <div class="campo" style="margin-top:14px">
-    <form method="post" action="{{ url_for('prever', id_execucao=e.id) }}" style="display:inline">
+    <form method="post" action="{{ url_for('prever', id_execucao=e.id) }}#previsoes" style="display:inline">
       <button class="btn" type="submit" {% if not modelo_existe %}disabled{% endif %}>Prever com o modelo salvo</button>
     </form>
     <a class="btn sec" href="{{ url_for('comparar', ids=e.id) }}">Comparar</a>
